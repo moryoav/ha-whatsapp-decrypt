@@ -4,6 +4,14 @@ The add-on exposes a small HTTP API on port `9000`. It auto-routes requests base
 
 The optional `media_type` query parameter can be one of `image`, `sticker`, `audio`, `video`, or `document`. Numeric values `1` through `5` are also accepted for compatibility with the old decryptor.
 
+## Health Check
+
+```text
+GET /health
+```
+
+Returns add-on health and version metadata for the companion custom integration setup flow.
+
 ## Image Analysis
 
 Send `code`, `url`, and `text` query parameters.

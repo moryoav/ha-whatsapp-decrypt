@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.0
+
+- Added a `/health` endpoint for custom integration setup checks.
+- Added a companion Home Assistant custom integration in this repository.
+
 ## 1.2.0
 
 - Replaced the external Go `whatsapp-media-decrypt` binary with built-in Python media decryption.

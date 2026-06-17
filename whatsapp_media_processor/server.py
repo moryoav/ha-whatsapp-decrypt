@@ -23,6 +23,7 @@ TMP_DIR = "/config/tmp"
 OPTIONS_PATH = "/data/options.json"
 
 DEFAULT_PAPERLESS_DIR = "/share/Paperless_ngx_consume"
+ADDON_VERSION = "1.3.0"
 DEFAULT_IMAGE_MODEL = "gpt-5.4-mini"
 DEFAULT_IMAGE_MAX_OUTPUT_TOKENS = 12000
 
@@ -601,6 +602,14 @@ def process_request():
     except Exception as e:
         logging.exception("Unexpected error")
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({
+        "status": "ok",
+        "version": ADDON_VERSION,
+    }), 200
 
 
 if __name__ == "__main__":

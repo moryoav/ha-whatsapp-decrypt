@@ -1,0 +1,16 @@
+{
+  "services": {
+    "process_audio": {
+      "service": "mdi:microphone-message"
+    },
+    "process_document": {
+      "service": "mdi:file-document-arrow-right"
+    },
+    "process_image": {
+      "service": "mdi:image-search"
+    },
+    "process_video": {
+      "service": "mdi:video-box"
+    }
+  }
+}

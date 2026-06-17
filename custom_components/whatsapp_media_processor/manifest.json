@@ -1,0 +1,13 @@
+{
+  "domain": "whatsapp_media_processor",
+  "name": "WhatsApp Media Processor",
+  "after_dependencies": ["http"],
+  "codeowners": ["@moryoav"],
+  "config_flow": true,
+  "documentation": "https://github.com/moryoav/ha-whatsapp-decrypt",
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "1.3.0"
+}

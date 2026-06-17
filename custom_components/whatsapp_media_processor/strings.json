@@ -1,0 +1,110 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "WhatsApp Media Processor",
+        "description": "Connect Home Assistant service actions to the WhatsApp Media Processor add-on.",
+        "data": {
+          "base_url": "Add-on base URL"
+        },
+        "data_description": {
+          "base_url": "The HTTP URL exposed by the add-on, for example http://192.168.1.229:9000."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to the add-on. Check that the add-on is running and that the URL is reachable from Home Assistant.",
+      "invalid_url": "Enter an absolute http or https URL.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This add-on URL is already configured."
+    }
+  },
+  "services": {
+    "process_audio": {
+      "name": "Process WhatsApp audio",
+      "description": "Decrypt a WhatsApp audio message and return the transcription.",
+      "fields": {
+        "code": {
+          "name": "Media key",
+          "description": "The WhatsApp media key, base64 encoded."
+        },
+        "url": {
+          "name": "Encrypted media URL",
+          "description": "The WhatsApp encrypted media URL."
+        },
+        "timeout": {
+          "name": "Timeout",
+          "description": "Maximum time to wait for processing, in seconds."
+        }
+      }
+    },
+    "process_document": {
+      "name": "Process WhatsApp document",
+      "description": "Decrypt a WhatsApp document and save it to the add-on's Paperless consume directory.",
+      "fields": {
+        "code": {
+          "name": "Media key",
+          "description": "The WhatsApp media key, base64 encoded."
+        },
+        "url": {
+          "name": "Encrypted media URL",
+          "description": "The WhatsApp encrypted media URL."
+        },
+        "filename": {
+          "name": "Filename",
+          "description": "Filename to use for the saved document."
+        },
+        "timeout": {
+          "name": "Timeout",
+          "description": "Maximum time to wait for processing, in seconds."
+        }
+      }
+    },
+    "process_image": {
+      "name": "Process WhatsApp image",
+      "description": "Decrypt a WhatsApp image or sticker and return OpenAI image-analysis output.",
+      "fields": {
+        "code": {
+          "name": "Media key",
+          "description": "The WhatsApp media key, base64 encoded."
+        },
+        "url": {
+          "name": "Encrypted media URL",
+          "description": "The WhatsApp encrypted media URL."
+        },
+        "text": {
+          "name": "Caption or request",
+          "description": "Text context to send with the image."
+        },
+        "media_type": {
+          "name": "Media type",
+          "description": "Use image for photos and sticker for WhatsApp stickers."
+        },
+        "timeout": {
+          "name": "Timeout",
+          "description": "Maximum time to wait for processing, in seconds."
+        }
+      }
+    },
+    "process_video": {
+      "name": "Process WhatsApp video",
+      "description": "Run a base64-encoded ffmpeg command through the add-on.",
+      "fields": {
+        "ffmpeg": {
+          "name": "ffmpeg command",
+          "description": "The base64-encoded ffmpeg command."
+        },
+        "user_id": {
+          "name": "User ID",
+          "description": "Optional user identifier to return with the add-on response."
+        },
+        "timeout": {
+          "name": "Timeout",
+          "description": "Maximum time to wait for processing, in seconds."
+        }
+      }
+    }
+  }
+}

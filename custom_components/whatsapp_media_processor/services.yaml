@@ -1,0 +1,104 @@
+process_audio:
+  fields:
+    code:
+      required: true
+      example: "base64_media_key"
+      selector:
+        text: {}
+    url:
+      required: true
+      example: "https://mmg.whatsapp.net/path/file.enc"
+      selector:
+        text:
+          type: url
+    timeout:
+      default: 90
+      selector:
+        number:
+          min: 1
+          max: 600
+          mode: box
+          unit_of_measurement: seconds
+
+process_document:
+  fields:
+    code:
+      required: true
+      example: "base64_media_key"
+      selector:
+        text: {}
+    url:
+      required: true
+      example: "https://mmg.whatsapp.net/path/file.enc"
+      selector:
+        text:
+          type: url
+    filename:
+      required: true
+      example: "document.pdf"
+      selector:
+        text: {}
+    timeout:
+      default: 90
+      selector:
+        number:
+          min: 1
+          max: 600
+          mode: box
+          unit_of_measurement: seconds
+
+process_image:
+  fields:
+    code:
+      required: true
+      example: "base64_media_key"
+      selector:
+        text: {}
+    url:
+      required: true
+      example: "https://mmg.whatsapp.net/path/file.enc"
+      selector:
+        text:
+          type: url
+    text:
+      required: true
+      example: "What is in this image?"
+      selector:
+        text:
+          multiline: true
+    media_type:
+      default: "image"
+      selector:
+        select:
+          options:
+            - image
+            - sticker
+    timeout:
+      default: 90
+      selector:
+        number:
+          min: 1
+          max: 600
+          mode: box
+          unit_of_measurement: seconds
+
+process_video:
+  fields:
+    ffmpeg:
+      required: true
+      example: "ZmZtcGVnIC15IC1pIC4uLg=="
+      selector:
+        text:
+          multiline: true
+    user_id:
+      example: "whatsapp_user"
+      selector:
+        text: {}
+    timeout:
+      default: 180
+      selector:
+        number:
+          min: 1
+          max: 600
+          mode: box
+          unit_of_measurement: seconds
