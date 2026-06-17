@@ -8,6 +8,7 @@ import shlex
 import logging
 import subprocess
 import tempfile
+import time
 import urllib.request
 
 from flask import Flask, request, jsonify, Response
@@ -21,9 +22,11 @@ app = Flask(__name__)
 
 TMP_DIR = "/config/tmp"
 OPTIONS_PATH = "/data/options.json"
+ADDON_PORT = 9000
+DISCOVERY_SERVICE = "whatsapp_media_processor"
 
 DEFAULT_PAPERLESS_DIR = "/share/Paperless_ngx_consume"
-ADDON_VERSION = "1.3.0"
+ADDON_VERSION = "1.4.0"
 DEFAULT_IMAGE_MODEL = "gpt-5.4-mini"
 DEFAULT_IMAGE_MAX_OUTPUT_TOKENS = 12000
 
@@ -116,6 +119,47 @@ def load_options():
 
     with open(OPTIONS_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def register_discovery():
+    supervisor_token = os.environ.get("SUPERVISOR_TOKEN")
+    hostname = os.environ.get("HOSTNAME") or "whatsapp-media-processor"
+
+    if not supervisor_token:
+        logging.info("Supervisor token is unavailable; skipping add-on discovery")
+        return
+
+    addon_url = f"http://{hostname}:{ADDON_PORT}"
+    payload = json.dumps({
+        "service": DISCOVERY_SERVICE,
+        "config": {
+            "url": addon_url,
+            "host": hostname,
+            "port": ADDON_PORT,
+        },
+    }).encode("utf-8")
+
+    for attempt in range(1, 4):
+        request = urllib.request.Request(
+            "http://supervisor/discovery",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {supervisor_token}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=10):
+                logging.info("Registered add-on discovery at %s", addon_url)
+                return
+        except Exception as exc:
+            logging.warning(
+                "Failed to register add-on discovery attempt %s: %s",
+                attempt,
+                exc,
+            )
+            time.sleep(attempt)
 
 
 def get_openai_client():
@@ -615,4 +659,5 @@ def health():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     ensure_dirs()
-    app.run(host="0.0.0.0", port=9000)
+    register_discovery()
+    app.run(host="0.0.0.0", port=ADDON_PORT)

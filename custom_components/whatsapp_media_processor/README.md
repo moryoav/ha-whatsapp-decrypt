@@ -8,13 +8,9 @@ This custom integration replaces `rest_command` wrappers with Home Assistant ser
 2. Copy `custom_components/whatsapp_media_processor` into your Home Assistant `/config/custom_components/` directory, or install this repository as a HACS custom integration.
 3. Restart Home Assistant.
 4. Go to **Settings** > **Devices & services** > **Add integration**.
-5. Add **WhatsApp Media Processor** and enter the add-on base URL, for example:
+5. Add **WhatsApp Media Processor**.
 
-   ```text
-   http://192.168.1.229:9000
-   ```
-
-The setup flow checks the add-on `/health` endpoint before saving the config entry.
+The setup flow finds the installed add-on through Supervisor discovery and checks the add-on `/health` endpoint before saving the config entry. You do not need to enter an IP address or port.
 
 ## Actions
 

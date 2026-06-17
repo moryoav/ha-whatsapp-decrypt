@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.0
+
+- Changed the add-on/integration connection model to Supervisor discovery.
+- Removed the published LAN port mapping; direct `rest_command` calls to `http://<home_assistant_ip>:9000` are no longer supported.
+- Added Supervisor discovery registration from the add-on runtime.
+- Updated the custom integration config flow to automatically find the installed add-on without asking for URL or port.
+
 ## 1.3.0
 
 - Added a `/health` endpoint for custom integration setup checks.

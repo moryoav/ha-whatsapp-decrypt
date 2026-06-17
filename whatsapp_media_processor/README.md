@@ -24,6 +24,8 @@ See [DOCS.md](./DOCS.md) for endpoint details and automation notes.
 
 This repository also includes a custom Home Assistant integration under `custom_components/whatsapp_media_processor`. It exposes the add-on API as Home Assistant actions so you do not need `rest_command` entries in `configuration.yaml`.
 
+The add-on no longer publishes port `9000` to the Home Assistant host. Install the companion integration and call its actions instead of calling the add-on with LAN `rest_command` URLs.
+
 ## Decryption Engine
 
 WhatsApp media decryption is implemented directly in the add-on. The Docker image no longer pulls `ddz/whatsapp-media-decrypt` or `moryoav/whatsapp-media-decrypt` during build.

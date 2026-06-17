@@ -3,22 +3,20 @@
     "step": {
       "user": {
         "title": "WhatsApp Media Processor",
-        "description": "Connect Home Assistant service actions to the WhatsApp Media Processor add-on.",
-        "data": {
-          "base_url": "Add-on base URL"
-        },
-        "data_description": {
-          "base_url": "The HTTP URL exposed by the add-on, for example http://192.168.1.229:9000."
-        }
+        "description": "Home Assistant will find the installed WhatsApp Media Processor add-on automatically."
+      },
+      "reconfigure": {
+        "title": "WhatsApp Media Processor",
+        "description": "Rediscover the installed WhatsApp Media Processor add-on."
       }
     },
     "error": {
-      "cannot_connect": "Could not connect to the add-on. Check that the add-on is running and that the URL is reachable from Home Assistant.",
-      "invalid_url": "Enter an absolute http or https URL.",
+      "cannot_connect": "Could not find a running WhatsApp Media Processor add-on. Check that the add-on is installed and started.",
       "unknown": "Unexpected error."
     },
     "abort": {
-      "already_configured": "This add-on URL is already configured."
+      "already_configured": "WhatsApp Media Processor is already configured.",
+      "cannot_connect": "Could not find a running WhatsApp Media Processor add-on."
     }
   },
   "services": {

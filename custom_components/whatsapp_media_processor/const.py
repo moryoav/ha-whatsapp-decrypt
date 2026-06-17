@@ -1,8 +1,18 @@
 DOMAIN = "whatsapp_media_processor"
 
 CONF_BASE_URL = "base_url"
+CONF_URL = "url"
 
-DEFAULT_BASE_URL = "http://homeassistant.local:9000"
+ADDON_DISCOVERY_SERVICE = DOMAIN
+ADDON_PORT = 9000
+ADDON_NAME = "WhatsApp Media Processor"
+ADDON_SLUG = "whatsapp_media_processor"
+ADDON_REPOSITORY = "moryoav/ha-whatsapp-decrypt"
+ADDON_FALLBACK_HOSTS = (
+    "whatsapp-media-processor",
+    "whatsapp_media_processor",
+)
+
 DEFAULT_AUDIO_TIMEOUT = 90
 DEFAULT_DOCUMENT_TIMEOUT = 90
 DEFAULT_IMAGE_TIMEOUT = 90

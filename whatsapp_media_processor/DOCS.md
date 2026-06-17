@@ -1,8 +1,10 @@
 # WhatsApp Media Processor Documentation
 
-The add-on exposes a small HTTP API on port `9000`. It auto-routes requests based on the query parameters you send.
+The add-on exposes a small internal HTTP API on port `9000`. It is meant for the companion Home Assistant integration and is not published to the LAN.
 
 The optional `media_type` query parameter can be one of `image`, `sticker`, `audio`, `video`, or `document`. Numeric values `1` through `5` are also accepted for compatibility with the old decryptor.
+
+Direct `rest_command` calls to `http://<home_assistant_ip>:9000` are no longer supported because the port is no longer mapped to the host. Use the companion integration actions instead.
 
 ## Health Check
 

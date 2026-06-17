@@ -24,11 +24,8 @@ The custom integration replaces `rest_command` entries with service actions.
 2. Restart Home Assistant.
 3. Go to **Settings** > **Devices & services** > **Add integration**.
 4. Add **WhatsApp Media Processor**.
-5. Enter the add-on base URL, for example:
 
-   ```text
-   http://192.168.1.229:9000
-   ```
+The integration finds the running add-on through Supervisor discovery. You do not need to enter an IP address or port.
 
 The integration exposes these actions:
 
@@ -46,4 +43,4 @@ The integration exposes these actions:
 - Image analysis uses the OpenAI Responses API.
 - WhatsApp media decryption is built into the add-on; no external decryptor repository is pulled during the image build.
 - The default image model is `gpt-5.4-mini`.
-- The add-on exposes an HTTP API on port `9000`.
+- The add-on exposes an internal HTTP API on port `9000` for the companion integration. The port is not published to the LAN.

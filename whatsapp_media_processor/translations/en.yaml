@@ -14,5 +14,3 @@ configuration:
   paperless_consume_dir:
     name: Paperless consume directory
     description: Directory where decrypted documents are saved.
-network:
-  9000/tcp: HTTP API port
