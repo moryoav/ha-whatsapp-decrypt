@@ -1,0 +1,35 @@
+name: WhatsApp Media Processor
+version: "1.1.0"
+slug: whatsapp_media_processor
+description: Processes WhatsApp audio, images, documents, and videos for Home Assistant automations
+url: "https://github.com/moryoav/ha-whatsapp-decrypt/tree/main/whatsapp_media_processor"
+arch:
+  - amd64
+startup: services
+boot: auto
+init: false
+
+ports:
+  9000/tcp: 9000
+ports_description:
+  9000/tcp: HTTP API for WhatsApp media processing
+
+map:
+  - type: share
+    read_only: false
+  - type: addon_config
+    read_only: false
+
+options:
+  openai_api_key: ""
+  audio_model: "whisper-1"
+  image_model: "gpt-5.4-mini"
+  image_max_output_tokens: 12000
+  paperless_consume_dir: "/share/Paperless_ngx_consume"
+
+schema:
+  openai_api_key: "password"
+  audio_model: "str"
+  image_model: "str"
+  image_max_output_tokens: "int(1,50000)"
+  paperless_consume_dir: "str"

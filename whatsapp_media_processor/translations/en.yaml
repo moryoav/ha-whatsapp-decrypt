@@ -1,0 +1,18 @@
+configuration:
+  openai_api_key:
+    name: OpenAI API key
+    description: API key used for audio transcription and image analysis.
+  audio_model:
+    name: Audio model
+    description: OpenAI model used for audio transcription.
+  image_model:
+    name: Image model
+    description: OpenAI model used for image analysis through the Responses API.
+  image_max_output_tokens:
+    name: Image max output tokens
+    description: Maximum generated output tokens for image-analysis responses.
+  paperless_consume_dir:
+    name: Paperless consume directory
+    description: Directory where decrypted documents are saved.
+network:
+  9000/tcp: HTTP API port
