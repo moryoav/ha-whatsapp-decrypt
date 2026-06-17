@@ -16,6 +16,7 @@ from .const import (
     ATTR_FILENAME,
     ATTR_FFMPEG,
     ATTR_MEDIA_TYPE,
+    ATTR_SAVE_DIR,
     ATTR_TEXT,
     ATTR_TIMEOUT,
     ATTR_URL,
@@ -48,6 +49,7 @@ DOCUMENT_SCHEMA = vol.Schema(
         vol.Required(ATTR_CODE): cv.string,
         vol.Required(ATTR_URL): cv.string,
         vol.Required(ATTR_FILENAME): cv.string,
+        vol.Optional(ATTR_SAVE_DIR): cv.string,
         vol.Optional(ATTR_TIMEOUT, default=DEFAULT_DOCUMENT_TIMEOUT): TIMEOUT_SCHEMA,
     }
 )
@@ -92,6 +94,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             code=call.data[ATTR_CODE],
             url=call.data[ATTR_URL],
             filename=call.data[ATTR_FILENAME],
+            save_dir=call.data.get(ATTR_SAVE_DIR),
             timeout=call.data[ATTR_TIMEOUT],
         )
         return _service_response(call, response)

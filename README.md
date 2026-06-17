@@ -27,8 +27,8 @@ This repository is designed to be used together with the WhatsApp integration in
 
 - Decrypts WhatsApp audio, documents, images, stickers, and prepared video-processing requests.
 - Transcribes audio with the configured OpenAI audio model.
-- Analyzes images and stickers with the OpenAI Responses API.
-- Saves decrypted documents to the configured Paperless consume directory.
+- Extracts image and sticker text with Tesseract OCR and analyzes them with the OpenAI Responses API.
+- Saves decrypted documents to a configurable folder and returns Tesseract plus OpenAI OCR.
 - Runs prepared `ffmpeg` commands for video processing workflows.
 - Exposes Home Assistant actions through the `whatsapp_media_processor` integration.
 
@@ -86,7 +86,11 @@ The integration finds the running add-on through Supervisor discovery and checks
 | `audio_model` | `whisper-1` | OpenAI audio transcription model. |
 | `image_model` | `gpt-5.4-mini` | OpenAI image analysis model. |
 | `image_max_output_tokens` | `12000` | Maximum generated output tokens for image analysis. |
-| `paperless_consume_dir` | `/share/Paperless_ngx_consume` | Directory where decrypted documents are saved. |
+| `tesseract_languages` | `eng+heb` | Tesseract OCR languages, separated with plus signs. |
+| `save_dir` | `/share/whatsapp_media_processor` | Default directory where decrypted documents are saved. Use your Paperless consume directory here if that is the desired destination. |
+| `document_model` | empty | Optional OpenAI model for document OCR. Empty falls back to `image_model`. |
+| `document_max_output_tokens` | `12000` | Maximum generated output tokens for document OCR. |
+| `document_ocr_max_pages` | `10` | Maximum number of document pages to OCR. |
 
 ## Actions
 
@@ -95,8 +99,8 @@ The integration exposes these Home Assistant actions:
 | Action | Required data | Result |
 | --- | --- | --- |
 | `whatsapp_media_processor.process_audio` | `code`, `url` | Decrypts WhatsApp audio and returns transcript text. |
-| `whatsapp_media_processor.process_document` | `code`, `url`, `filename` | Decrypts a document and saves it to `paperless_consume_dir`. |
-| `whatsapp_media_processor.process_image` | `code`, `url`, `text` | Decrypts an image, sends it to OpenAI with the prompt/caption, and returns the analysis text. |
+| `whatsapp_media_processor.process_document` | `code`, `url`, `filename` | Decrypts a document, saves it locally, runs Tesseract and OpenAI OCR, and returns the saved path plus both labeled results. |
+| `whatsapp_media_processor.process_image` | `code`, `url`, `text` | Decrypts an image, runs Tesseract OCR, sends it to OpenAI with the prompt/caption, and returns both labeled results. |
 | `whatsapp_media_processor.process_video` | `ffmpeg` | Runs a base64-encoded `ffmpeg` command and returns output file metadata. |
 
 All actions accept `timeout` in seconds. `process_image` also accepts `media_type: sticker` for WhatsApp stickers. `process_video` can also accept `user_id`.
@@ -156,7 +160,14 @@ Document messages can arrive as `documentMessage` or as `documentWithCaptionMess
     code: "{{ document_media_key }}"
     filename: "{{ document_filename }}"
   response_variable: whatsapp_msg
+- variables:
+    saved_document_path: "{{ whatsapp_msg.path | default(whatsapp_msg.file | default('', true), true) | string | trim }}"
+    document_text: "{{ whatsapp_msg.text | default('', true) | string | trim }}"
+    tesseract_text: "{{ whatsapp_msg.tesseract_text | default('', true) | string | trim }}"
+    openai_text: "{{ whatsapp_msg.openai_output_text | default('', true) | string | trim }}"
 ```
+
+Use `save_dir` to override the configured save folder for a single document. The path must be an absolute folder path that the add-on can write to, such as `/share/Documents` or a Paperless consume directory.
 
 For production automations, validate that `document_url` and `document_media_key` are not empty before calling the action.
 
@@ -173,7 +184,9 @@ For production automations, validate that `document_url` and `document_media_key
     text: "{{ trigger.event.data.message.imageMessage.caption | default('', true) }}"
   response_variable: whatsapp_msg
 - variables:
-    request_text: "{{ whatsapp_msg.text | default(whatsapp_msg.output_text | default('', true), true) | string | trim }}"
+    request_text: "{{ whatsapp_msg.text | default('', true) | string | trim }}"
+    tesseract_text: "{{ whatsapp_msg.tesseract_text | default('', true) | string | trim }}"
+    openai_text: "{{ whatsapp_msg.openai_output_text | default('', true) | string | trim }}"
 ```
 
 ### Sticker
@@ -206,8 +219,8 @@ For production automations, validate that `document_url` and `document_media_key
 Typical response values:
 
 - Audio: `text`
-- Document: `message`, `file`
-- Image and sticker: `text`, `output_text`, `choices`, and native OpenAI Responses API fields
+- Document: `file`, `path`, `text`, `combined_text`, `tesseract_text`, `openai_output_text`, `ocr`, and `document`
+- Image and sticker: `text` and `combined_text` with labeled Tesseract/OpenAI sections, `tesseract_text`, `openai_output_text`, `ocr`, `choices`, and native OpenAI Responses API fields
 - Video: `files`, `user`
 
 ## Notes

@@ -40,7 +40,7 @@
     },
     "process_document": {
       "name": "Process WhatsApp document",
-      "description": "Decrypt a WhatsApp document and save it to the add-on's Paperless consume directory.",
+      "description": "Decrypt a WhatsApp document, save it locally, and return labeled Tesseract plus OpenAI OCR output.",
       "fields": {
         "code": {
           "name": "Media key",
@@ -54,6 +54,10 @@
           "name": "Filename",
           "description": "Filename to use for the saved document."
         },
+        "save_dir": {
+          "name": "Save directory",
+          "description": "Optional absolute directory path where the document should be saved."
+        },
         "timeout": {
           "name": "Timeout",
           "description": "Maximum time to wait for processing, in seconds."
@@ -62,7 +66,7 @@
     },
     "process_image": {
       "name": "Process WhatsApp image",
-      "description": "Decrypt a WhatsApp image or sticker and return OpenAI image-analysis output.",
+      "description": "Decrypt a WhatsApp image or sticker and return labeled Tesseract OCR plus OpenAI image-analysis output.",
       "fields": {
         "code": {
           "name": "Media key",

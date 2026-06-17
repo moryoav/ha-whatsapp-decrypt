@@ -28,10 +28,16 @@ For stickers, include `media_type=sticker` and `text`:
 GET /?code=<base64_media_key>&url=<encrypted_sticker_url>&media_type=sticker&text=<caption_or_request>
 ```
 
-The image is decrypted, resized when needed, encoded as a data URL, and sent to OpenAI using the Responses API. The response JSON includes:
+The image is decrypted, then Tesseract OCR and OpenAI image analysis run in parallel. The OpenAI path resizes and encodes an in-memory copy of the image. The response JSON includes:
 
-- `output_text`: aggregated Responses API text output.
-- `text`: same value as `output_text`, for easier Home Assistant templates.
+- `text`: labeled combined output with separate `Tesseract OCR` and `OpenAI OCR and image analysis` sections.
+- `combined_text`: same value as `text`, for easier Home Assistant templates.
+- `tesseract_text`: raw OCR text returned by Tesseract.
+- `tesseract_error`: error text if Tesseract OCR failed; otherwise `null`.
+- `openai_output_text`: raw aggregated Responses API text output from OpenAI.
+- `openai_text`: same value as `openai_output_text`.
+- `ocr`: structured object with separate `tesseract` and `openai` entries.
+- `output_text`: same labeled combined output as `text`.
 - `choices[0].message.content`: compatibility field for older Chat Completions-style templates.
 - Native Responses API fields such as `id`, `status`, `output`, and `usage`.
 
@@ -45,7 +51,7 @@ GET /?code=<base64_media_key>&url=<encrypted_media_url>
 
 The add-on returns the transcription as `text/plain`.
 
-## Document Save
+## Document Processing
 
 Send `code`, `url`, and `filename`.
 
@@ -53,7 +59,29 @@ Send `code`, `url`, and `filename`.
 GET /?code=<base64_media_key>&url=<encrypted_media_url>&filename=<safe_filename.pdf>
 ```
 
-The decrypted document is saved under `paperless_consume_dir`.
+To save to a specific add-on-accessible folder, include `save_dir`:
+
+```text
+GET /?code=<base64_media_key>&url=<encrypted_media_url>&filename=<safe_filename.pdf>&save_dir=/share/Documents
+```
+
+The decrypted document is saved under the request `save_dir` when supplied, otherwise under the configured `save_dir`. The response JSON includes:
+
+- `file` and `path`: saved document path.
+- `filename`: sanitized saved filename.
+- `save_dir`: directory used for the save.
+- `text`: labeled combined output with separate `Tesseract OCR` and `OpenAI OCR and document analysis` sections.
+- `combined_text`: same value as `text`.
+- `tesseract_text`: raw OCR text returned by Tesseract.
+- `tesseract_error`: error text if Tesseract OCR failed; otherwise `null`.
+- `openai_output_text`: raw document OCR output from OpenAI.
+- `openai_text`: same value as `openai_output_text`.
+- `openai_error`: error text if OpenAI document OCR failed; otherwise `null`.
+- `ocr`: structured object with separate `tesseract` and `openai` entries.
+- `document`: detected document format, page count, processed page count, max pages, and truncation metadata.
+- `choices[0].message.content`: compatibility field for older Chat Completions-style templates.
+
+Document OCR supports PDFs and image documents. Unsupported document types are still saved and return OCR error fields.
 
 ## Video Processing
 
@@ -68,6 +96,10 @@ The command must start with `ffmpeg`. The add-on injects `-y` if it is missing.
 ## OpenAI Notes
 
 Image analysis uses `client.responses.create(...)` with `input_text` and `input_image` content items. The configured token limit is sent as `max_output_tokens`, which is the Responses API parameter for generated output length.
+
+Tesseract OCR uses `eng+heb` by default, and this can be changed with the `tesseract_languages` add-on option.
+
+Document OCR renders supported documents to page images, then sends copies of those page images to Tesseract and OpenAI in parallel. `document_ocr_max_pages` limits the number of pages processed. OpenAI document OCR uses `document_model` when set, otherwise `image_model`, and uses `document_max_output_tokens` for response length.
 
 ## Decryption Notes
 

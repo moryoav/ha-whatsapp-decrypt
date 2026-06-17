@@ -13,6 +13,9 @@ RUN apk add --no-cache \
     py3-pip \
     py3-pillow \
     py3-cryptography \
+    tesseract-ocr \
+    tesseract-ocr-data-eng \
+    tesseract-ocr-data-heb \
     ffmpeg \
     bash \
     ca-certificates
@@ -20,6 +23,8 @@ RUN apk add --no-cache \
 RUN pip3 install \
     flask \
     openai \
+    pymupdf \
+    pytesseract \
     --break-system-packages
 
 WORKDIR /data

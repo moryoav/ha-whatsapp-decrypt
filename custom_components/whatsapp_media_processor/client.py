@@ -15,6 +15,7 @@ from .const import (
     ATTR_FILENAME,
     ATTR_FFMPEG,
     ATTR_MEDIA_TYPE,
+    ATTR_SAVE_DIR,
     ATTR_TEXT,
     ATTR_URL,
     ATTR_USER_ID,
@@ -78,19 +79,20 @@ class WhatsAppMediaProcessorClient:
         code: str,
         url: str,
         filename: str,
+        save_dir: str | None,
         timeout: int,
     ) -> dict[str, Any]:
         """Process a WhatsApp document message."""
-        return await self._request(
-            "",
-            {
-                ATTR_CODE: code,
-                ATTR_URL: url,
-                ATTR_FILENAME: filename,
-                ATTR_MEDIA_TYPE: "document",
-            },
-            timeout=timeout,
-        )
+        params = {
+            ATTR_CODE: code,
+            ATTR_URL: url,
+            ATTR_FILENAME: filename,
+            ATTR_MEDIA_TYPE: "document",
+        }
+        if save_dir:
+            params[ATTR_SAVE_DIR] = save_dir
+
+        return await self._request("", params, timeout=timeout)
 
     async def async_process_image(
         self,

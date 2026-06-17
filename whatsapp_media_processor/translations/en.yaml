@@ -11,6 +11,18 @@ configuration:
   image_max_output_tokens:
     name: Image max output tokens
     description: Maximum generated output tokens for image-analysis responses.
-  paperless_consume_dir:
-    name: Paperless consume directory
-    description: Directory where decrypted documents are saved.
+  tesseract_languages:
+    name: Tesseract languages
+    description: Tesseract OCR language codes to use for image text extraction, separated with plus signs.
+  save_dir:
+    name: Save directory
+    description: Default directory where decrypted documents are saved. Use a Paperless consume directory here if documents should be sent to Paperless.
+  document_model:
+    name: Document model
+    description: Optional OpenAI model used for document OCR. Leave empty to use the image model.
+  document_max_output_tokens:
+    name: Document max output tokens
+    description: Maximum generated output tokens for document OCR responses.
+  document_ocr_max_pages:
+    name: Document OCR max pages
+    description: Maximum number of document pages to OCR with Tesseract and OpenAI.

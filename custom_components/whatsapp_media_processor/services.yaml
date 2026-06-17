@@ -38,8 +38,12 @@ process_document:
       example: "document.pdf"
       selector:
         text: {}
+    save_dir:
+      example: "/share/Documents"
+      selector:
+        text: {}
     timeout:
-      default: 90
+      default: 180
       selector:
         number:
           min: 1

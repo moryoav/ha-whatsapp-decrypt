@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.8.0
+
+- Added document OCR after document decryption and local save.
+- Added configurable and per-request `save_dir` for document saves.
+- Added OpenAI and Tesseract OCR output fields to document responses, including the saved file path.
+- Added PDF page rendering through PyMuPDF for document OCR.
+- Added document OCR options for model, max output tokens, and max processed pages.
+- Runs Tesseract and OpenAI OCR in parallel for image and document processing.
+
+## 1.7.0
+
+- Added local Tesseract OCR for image and sticker processing before the OpenAI image-analysis request.
+- Added labeled combined image output plus separate `tesseract_text` and `openai_output_text` fields.
+- Added the `tesseract_languages` add-on option, defaulting to `eng+heb`.
+- Added Tesseract and `pytesseract` runtime dependencies to the add-on image.
+
 ## 1.6.0
 
 - Reworked the repository README around the current add-on and companion integration workflow.

@@ -48,6 +48,8 @@ data:
 response_variable: whatsapp_document
 ```
 
+Set `save_dir` to override the configured document save folder for a single call. Document responses include `file`/`path` for the saved document and `text`/`combined_text` with labeled Tesseract/OpenAI sections. Use `tesseract_text` or `openai_output_text` when an automation needs one OCR source specifically.
+
 ### Image
 
 ```yaml
@@ -58,6 +60,8 @@ data:
   text: "{{ text }}"
 response_variable: whatsapp_image
 ```
+
+Image responses include `text` and `combined_text` with labeled Tesseract/OpenAI sections. Use `tesseract_text` or `openai_output_text` when an automation needs one OCR source specifically.
 
 For stickers, call `process_image` with `media_type: sticker`.
 
