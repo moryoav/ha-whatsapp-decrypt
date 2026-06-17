@@ -26,7 +26,7 @@ ADDON_PORT = 9000
 DISCOVERY_SERVICE = "whatsapp_media_processor"
 
 DEFAULT_PAPERLESS_DIR = "/share/Paperless_ngx_consume"
-ADDON_VERSION = "1.4.0"
+ADDON_VERSION = "1.5.0"
 DEFAULT_IMAGE_MODEL = "gpt-5.4-mini"
 DEFAULT_IMAGE_MAX_OUTPUT_TOKENS = 12000
 

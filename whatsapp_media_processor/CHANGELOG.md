@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.0
+
+- Added Home Assistant custom integration brand assets under `custom_components/whatsapp_media_processor/brand`.
+- Added custom integration translations under `custom_components/whatsapp_media_processor/translations`.
+
 ## 1.4.0
 
 - Changed the add-on/integration connection model to Supervisor discovery.
