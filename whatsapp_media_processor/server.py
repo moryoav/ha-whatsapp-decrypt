@@ -2,24 +2,75 @@ import os
 import re
 import json
 import base64
+import hashlib
+import hmac
 import shlex
 import logging
 import subprocess
+import tempfile
 import urllib.request
 
 from flask import Flask, request, jsonify, Response
 from openai import OpenAI
 from PIL import Image
+from cryptography.hazmat.primitives import hashes, padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 app = Flask(__name__)
 
 TMP_DIR = "/config/tmp"
 OPTIONS_PATH = "/data/options.json"
-WHATSAPP_DECRYPT_BIN = "/go/bin/whatsapp-media-decrypt"
 
 DEFAULT_PAPERLESS_DIR = "/share/Paperless_ngx_consume"
 DEFAULT_IMAGE_MODEL = "gpt-5.4-mini"
 DEFAULT_IMAGE_MAX_OUTPUT_TOKENS = 12000
+
+MEDIA_TYPE_IMAGE = 1
+MEDIA_TYPE_VIDEO = 2
+MEDIA_TYPE_AUDIO = 3
+MEDIA_TYPE_DOCUMENT = 4
+MEDIA_TYPE_STICKER = 5
+
+MEDIA_TYPE_ALIASES = {
+    "1": MEDIA_TYPE_IMAGE,
+    "image": MEDIA_TYPE_IMAGE,
+    "photo": MEDIA_TYPE_IMAGE,
+    "2": MEDIA_TYPE_VIDEO,
+    "video": MEDIA_TYPE_VIDEO,
+    "3": MEDIA_TYPE_AUDIO,
+    "audio": MEDIA_TYPE_AUDIO,
+    "ptt": MEDIA_TYPE_AUDIO,
+    "voice": MEDIA_TYPE_AUDIO,
+    "4": MEDIA_TYPE_DOCUMENT,
+    "doc": MEDIA_TYPE_DOCUMENT,
+    "document": MEDIA_TYPE_DOCUMENT,
+    "5": MEDIA_TYPE_STICKER,
+    "sticker": MEDIA_TYPE_STICKER,
+}
+
+MEDIA_TYPE_NAMES = {
+    MEDIA_TYPE_IMAGE: "image",
+    MEDIA_TYPE_VIDEO: "video",
+    MEDIA_TYPE_AUDIO: "audio",
+    MEDIA_TYPE_DOCUMENT: "document",
+    MEDIA_TYPE_STICKER: "sticker",
+}
+
+MEDIA_APP_INFO = {
+    MEDIA_TYPE_IMAGE: b"WhatsApp Image Keys",
+    MEDIA_TYPE_VIDEO: b"WhatsApp Video Keys",
+    MEDIA_TYPE_AUDIO: b"WhatsApp Audio Keys",
+    MEDIA_TYPE_DOCUMENT: b"WhatsApp Document Keys",
+    # WhatsApp Web libraries route sticker media through image keys.
+    MEDIA_TYPE_STICKER: b"WhatsApp Image Keys",
+}
+
+IMAGE_MIME_TYPES = {
+    "JPEG": "image/jpeg",
+    "PNG": "image/png",
+    "WEBP": "image/webp",
+}
 
 IMAGE_ANALYSIS_INSTRUCTIONS = (
     "You are an image-analysis step inside a Home Assistant WhatsApp automation. "
@@ -105,37 +156,179 @@ def download_file(url, output_path):
     urllib.request.urlretrieve(url, output_path)
 
 
-def decode_code_to_hex(code):
-    decoded_code = base64.b64decode(code)
-    return "".join(f"{byte:02x}" for byte in decoded_code)
+def get_request_media_type(default=None):
+    media_type = (
+        request.args.get("media_type")
+        or request.args.get("mediaType")
+        or request.args.get("type")
+    )
+
+    if not media_type:
+        return default
+
+    parsed = MEDIA_TYPE_ALIASES.get(media_type.strip().lower())
+    if parsed is None:
+        allowed = ", ".join(sorted(MEDIA_TYPE_ALIASES))
+        raise ValueError(f"Unsupported media_type '{media_type}'. Use one of: {allowed}")
+
+    return parsed
+
+
+def decode_media_key_code(code):
+    if not code:
+        raise ValueError("Missing 'code' parameter")
+
+    normalized = code.strip().replace(" ", "+")
+    normalized += "=" * (-len(normalized) % 4)
+
+    return base64.urlsafe_b64decode(normalized)
+
+
+def read_proto_varint(data, offset):
+    result = 0
+    shift = 0
+
+    while offset < len(data):
+        byte = data[offset]
+        offset += 1
+        result |= (byte & 0x7F) << shift
+
+        if byte < 0x80:
+            return result, offset
+
+        shift += 7
+        if shift > 63:
+            raise ValueError("Invalid protobuf varint")
+
+    raise ValueError("Unexpected end of protobuf varint")
+
+
+def parse_media_key_blob(media_key_blob):
+    if len(media_key_blob) == 32:
+        return media_key_blob, None
+
+    media_key = None
+    file_hash = None
+    offset = 0
+
+    while offset < len(media_key_blob):
+        key, offset = read_proto_varint(media_key_blob, offset)
+        field_number = key >> 3
+        wire_type = key & 0x07
+
+        if wire_type == 0:
+            _, offset = read_proto_varint(media_key_blob, offset)
+            continue
+
+        if wire_type != 2:
+            raise ValueError(f"Unsupported media key protobuf wire type {wire_type}")
+
+        length, offset = read_proto_varint(media_key_blob, offset)
+        end = offset + length
+        if end > len(media_key_blob):
+            raise ValueError("Invalid media key protobuf length")
+
+        value = media_key_blob[offset:end]
+        offset = end
+
+        if field_number == 1:
+            media_key = value
+        elif field_number == 2:
+            file_hash = value
+
+    if not media_key:
+        raise ValueError("Could not find media key in protobuf blob")
+
+    return media_key, file_hash
+
+
+def expand_media_key(media_key, media_type):
+    app_info = MEDIA_APP_INFO.get(media_type)
+    if app_info is None:
+        raise ValueError(f"Unsupported media type {media_type}")
+
+    if len(media_key) != 32:
+        raise ValueError(f"mediaKey length {len(media_key)} != 32")
+
+    return HKDF(
+        algorithm=hashes.SHA256(),
+        length=112,
+        salt=None,
+        info=app_info,
+    ).derive(media_key)
+
+
+def decrypt_media_data(enc_file_data, media_key_blob, media_type):
+    media_key, file_hash = parse_media_key_blob(media_key_blob)
+
+    if file_hash:
+        enc_file_hash = hashlib.sha256(enc_file_data).digest()
+        if not hmac.compare_digest(enc_file_hash, file_hash):
+            raise ValueError(".enc file hash does not match mediaKey")
+
+    expanded_key = expand_media_key(media_key, media_type)
+    iv = expanded_key[0:16]
+    cipher_key = expanded_key[16:48]
+    mac_key = expanded_key[48:80]
+
+    if len(enc_file_data) <= 10:
+        raise ValueError("Encrypted file is too short")
+
+    encrypted_data = enc_file_data[:-10]
+    media_mac = enc_file_data[-10:]
+    expected_mac = hmac.new(
+        mac_key,
+        iv + encrypted_data,
+        hashlib.sha256,
+    ).digest()[:10]
+
+    if not hmac.compare_digest(expected_mac, media_mac):
+        media_name = MEDIA_TYPE_NAMES.get(media_type, str(media_type))
+        raise ValueError(f"Invalid media HMAC for {media_name}")
+
+    decryptor = Cipher(
+        algorithms.AES(cipher_key),
+        modes.CBC(iv),
+    ).decryptor()
+    padded_data = decryptor.update(encrypted_data) + decryptor.finalize()
+
+    unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
+    return unpadder.update(padded_data) + unpadder.finalize()
 
 
 def decrypt_whatsapp_file(code, url, media_type, output_path):
     """
-    WhatsApp media types used by whatsapp-media-decrypt:
     1 = image
     2 = video
     3 = audio
     4 = document
+    5 = sticker, decrypted with WhatsApp image keys
     """
     if not code or not url:
         raise ValueError("Missing 'code' or 'url' parameter")
 
-    hex_code = decode_code_to_hex(code)
+    media_key_blob = decode_media_key_code(code)
 
-    enc_file_path = os.path.join(TMP_DIR, "file.enc")
-    download_file(url, enc_file_path)
+    fd, enc_file_path = tempfile.mkstemp(suffix=".enc", dir=TMP_DIR)
+    os.close(fd)
 
-    cmd = [
-        WHATSAPP_DECRYPT_BIN,
-        "-o", output_path,
-        "-t", str(media_type),
-        enc_file_path,
-        hex_code,
-    ]
+    try:
+        download_file(url, enc_file_path)
 
-    logging.info("Decrypting WhatsApp media type %s to %s", media_type, output_path)
-    subprocess.run(cmd, check=True)
+        with open(enc_file_path, "rb") as enc_file:
+            enc_file_data = enc_file.read()
+
+        data = decrypt_media_data(enc_file_data, media_key_blob, media_type)
+
+        with open(output_path, "wb") as output_file:
+            output_file.write(data)
+    finally:
+        try:
+            os.remove(enc_file_path)
+        except FileNotFoundError:
+            pass
+
+    logging.info("Decrypted WhatsApp media type %s to %s", media_type, output_path)
 
     return output_path
 
@@ -170,6 +363,11 @@ def resize_image(image_path):
             )
             img = img.resize(new_size, Image.Resampling.LANCZOS)
             img.save(image_path)
+
+
+def get_image_mime_type(image_path):
+    with Image.open(image_path) as img:
+        return IMAGE_MIME_TYPES.get(img.format, "image/jpeg")
 
 
 def encode_image_base64(image_path):
@@ -262,6 +460,7 @@ def process_document():
     code = request.args.get("code")
     url = request.args.get("url")
     filename = sanitize_filename(request.args.get("filename"))
+    media_type = get_request_media_type(MEDIA_TYPE_DOCUMENT)
 
     paperless_dir = get_option("paperless_consume_dir", DEFAULT_PAPERLESS_DIR)
     os.makedirs(paperless_dir, exist_ok=True)
@@ -271,7 +470,7 @@ def process_document():
     decrypt_whatsapp_file(
         code=code,
         url=url,
-        media_type=4,
+        media_type=media_type,
         output_path=decrypted_file_path,
     )
 
@@ -284,13 +483,17 @@ def process_document():
 def process_audio():
     code = request.args.get("code")
     url = request.args.get("url")
+    media_type = get_request_media_type(MEDIA_TYPE_AUDIO)
+
+    if media_type != MEDIA_TYPE_AUDIO:
+        raise ValueError("Audio transcription only supports audio media")
 
     decrypted_file_path = os.path.join(TMP_DIR, "file.ogg")
 
     decrypt_whatsapp_file(
         code=code,
         url=url,
-        media_type=3,
+        media_type=media_type,
         output_path=decrypted_file_path,
     )
 
@@ -310,21 +513,27 @@ def process_image():
     code = request.args.get("code")
     url = request.args.get("url")
     user_text = request.args.get("text")
+    media_type = get_request_media_type(MEDIA_TYPE_IMAGE)
+
+    if media_type not in (MEDIA_TYPE_IMAGE, MEDIA_TYPE_STICKER):
+        raise ValueError("Image processing only supports image or sticker media")
 
     if not user_text:
         return jsonify({"error": "Missing 'text' parameter for image processing"}), 400
 
-    decrypted_file_path = os.path.join(TMP_DIR, "file.jpg")
+    file_extension = "webp" if media_type == MEDIA_TYPE_STICKER else "jpg"
+    decrypted_file_path = os.path.join(TMP_DIR, f"file.{file_extension}")
 
     decrypt_whatsapp_file(
         code=code,
         url=url,
-        media_type=1,
+        media_type=media_type,
         output_path=decrypted_file_path,
     )
 
     resize_image(decrypted_file_path)
     base64_image = encode_image_base64(decrypted_file_path)
+    image_mime_type = get_image_mime_type(decrypted_file_path)
 
     client = get_openai_client()
     image_model = get_option("image_model", DEFAULT_IMAGE_MODEL)
@@ -346,7 +555,7 @@ def process_image():
                     },
                     {
                         "type": "input_image",
-                        "image_url": f"data:image/jpeg;base64,{base64_image}",
+                        "image_url": f"data:{image_mime_type};base64,{base64_image}",
                     },
                 ],
             },
@@ -362,6 +571,7 @@ def process_image():
 def process_request():
     try:
         ensure_dirs()
+        media_type = get_request_media_type()
 
         # Auto-routing without adding a new explicit type parameter.
         if request.args.get("ffmpeg"):
@@ -373,11 +583,20 @@ def process_request():
         if request.args.get("text"):
             return process_image()
 
-        return process_audio()
+        if media_type in (MEDIA_TYPE_IMAGE, MEDIA_TYPE_STICKER):
+            return jsonify({
+                "error": "Missing 'text' parameter for image or sticker processing",
+            }), 400
 
-    except subprocess.CalledProcessError as e:
-        logging.exception("Subprocess failed")
-        return jsonify({"error": f"Subprocess error: {str(e)}"}), 500
+        if media_type == MEDIA_TYPE_DOCUMENT:
+            return process_document()
+
+        if media_type == MEDIA_TYPE_VIDEO:
+            return jsonify({
+                "error": "Video processing requires the 'ffmpeg' parameter",
+            }), 400
+
+        return process_audio()
 
     except Exception as e:
         logging.exception("Unexpected error")

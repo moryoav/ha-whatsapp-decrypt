@@ -6,6 +6,7 @@ Decrypts WhatsApp media and prepares it for Home Assistant automations.
 
 - Audio: decrypts WhatsApp audio and transcribes it with OpenAI audio transcription.
 - Images: decrypts, resizes, and analyzes images with the OpenAI Responses API.
+- Stickers: supported as image-key media when explicitly requested with `media_type=sticker`.
 - Documents: decrypts and saves files to a Paperless consume directory.
 - Videos: runs a base64-encoded `ffmpeg` command for automation-driven processing.
 
@@ -18,3 +19,7 @@ Decrypts WhatsApp media and prepares it for Home Assistant automations.
 - `paperless_consume_dir`: Directory where decrypted documents are saved.
 
 See [DOCS.md](./DOCS.md) for endpoint details and automation notes.
+
+## Decryption Engine
+
+WhatsApp media decryption is implemented directly in the add-on. The Docker image no longer pulls `ddz/whatsapp-media-decrypt` or `moryoav/whatsapp-media-decrypt` during build.

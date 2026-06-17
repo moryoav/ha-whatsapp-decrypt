@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0
+
+- Replaced the external Go `whatsapp-media-decrypt` binary with built-in Python media decryption.
+- Removed the Docker build dependency on `github.com/ddz/whatsapp-media-decrypt@latest`.
+- Added explicit `media_type` parsing for image, sticker, audio, video, and document requests.
+- Treated stickers as image-key media instead of using the unverified `WhatsApp Sticker Keys` fork change.
+- Reduced Docker image build dependencies by removing Go and Git.
+
 ## 1.1.0
 
 - Migrated image analysis from Chat Completions to the OpenAI Responses API.

@@ -23,5 +23,6 @@ Home Assistant add-on repository for processing encrypted WhatsApp media from au
 ## Notes
 
 - Image analysis uses the OpenAI Responses API.
+- WhatsApp media decryption is built into the add-on; no external decryptor repository is pulled during the image build.
 - The default image model is `gpt-5.4-mini`.
 - The add-on exposes an HTTP API on port `9000`.
