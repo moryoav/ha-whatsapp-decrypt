@@ -1,0 +1,130 @@
+name: Bug report
+description: Report a reproducible problem with WhatsApp Media Processor.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Remove OpenAI keys, WhatsApp media keys, encrypted media URLs, phone numbers, private message content, tokens, and personal Home Assistant configuration before submitting.
+
+  - type: input
+    id: version
+    attributes:
+      label: WhatsApp Media Processor version
+      description: Include the installed version or commit if known.
+      placeholder: "Example: 1.6.0"
+    validations:
+      required: true
+
+  - type: input
+    id: home_assistant_version
+    attributes:
+      label: Home Assistant version
+      placeholder: "Example: 2026.6.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Installation method
+      options:
+        - Home Assistant add-on repository and HACS custom integration
+        - Home Assistant add-on repository and manual custom integration
+        - Development branch
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: Affected area
+      options:
+        - Add-on startup or configuration
+        - Integration setup or discovery
+        - Audio action
+        - Document action
+        - Image or sticker action
+        - Video action
+        - OpenAI request or response
+        - File save or Paperless consume directory
+        - Diagnostics or logs
+        - Documentation
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: host_type
+    attributes:
+      label: Home Assistant host type
+      description: Include OS, Supervisor, container, or hardware details if relevant.
+      placeholder: "Example: Home Assistant OS on Raspberry Pi 4"
+
+  - type: input
+    id: companion_integration
+    attributes:
+      label: WhatsApp integration source
+      description: Include the companion WhatsApp integration or add-on used to emit the event.
+      placeholder: "Example: moryoav/ha-addons WhatsApp integration"
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the exact steps that trigger the issue.
+      placeholder: |
+        1. Receive a WhatsApp ...
+        2. Call action ...
+        3. See error ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: action_payload
+    attributes:
+      label: Relevant action payload or automation fragment
+      description: Paste a minimal YAML example with secrets, media keys, URLs, phone numbers, and message contents removed.
+      render: yaml
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste relevant Home Assistant, add-on, or integration logs after removing sensitive information.
+      render: text
+
+  - type: textarea
+    id: extra_context
+    attributes:
+      label: Additional context
+      description: Add anything else that helps explain the issue.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I removed secrets, tokens, OpenAI keys, WhatsApp media keys, encrypted media URLs, phone numbers, private message content, and personal Home Assistant configuration.
+          required: true
+        - label: I checked the existing issues for a similar report.
+          required: true

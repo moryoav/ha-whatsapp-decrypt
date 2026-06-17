@@ -1,0 +1,74 @@
+name: Feature request
+description: Suggest an improvement or new capability.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Please describe the Home Assistant workflow or WhatsApp media use case you want to make better.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What problem should this feature solve?
+      placeholder: "I want to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior you would like to see.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: Area of the project
+      options:
+        - Add-on startup or configuration
+        - Integration setup or discovery
+        - Audio action
+        - Document action
+        - Image or sticker action
+        - Video action
+        - OpenAI request or response
+        - File save or Paperless consume directory
+        - Diagnostics or logs
+        - Documentation or examples
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: companion_workflow
+    attributes:
+      label: Companion WhatsApp workflow
+      description: Describe how this should work with events from the WhatsApp integration in moryoav/ha-addons, if relevant.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Are there current workarounds or other designs you considered?
+
+  - type: textarea
+    id: security
+    attributes:
+      label: Security, privacy, and cost considerations
+      description: Note any impact on media keys, encrypted URLs, decrypted files, OpenAI usage, logs, file writes, or private Home Assistant data.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I checked the existing issues for a similar request.
+          required: true
+        - label: This request does not include secrets, tokens, OpenAI keys, WhatsApp media keys, encrypted media URLs, phone numbers, private message content, or personal Home Assistant configuration.
+          required: true

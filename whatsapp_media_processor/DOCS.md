@@ -2,9 +2,9 @@
 
 The add-on exposes a small internal HTTP API on port `9000`. It is meant for the companion Home Assistant integration and is not published to the LAN.
 
-The optional `media_type` query parameter can be one of `image`, `sticker`, `audio`, `video`, or `document`. Numeric values `1` through `5` are also accepted for compatibility with the old decryptor.
+The optional `media_type` query parameter can be one of `image`, `sticker`, `audio`, `video`, or `document`. Numeric values `1` through `5` are also accepted.
 
-Direct `rest_command` calls to `http://<home_assistant_ip>:9000` are no longer supported because the port is no longer mapped to the host. Use the companion integration actions instead.
+Home Assistant automations should use the companion integration actions. The HTTP routes below document the add-on interface used by that integration.
 
 ## Health Check
 
@@ -71,4 +71,4 @@ Image analysis uses `client.responses.create(...)` with `input_text` and `input_
 
 ## Decryption Notes
 
-The decryption logic is implemented inside the Python add-on process. It supports the same raw 32-byte media key and protobuf media-key blob formats handled by the old Go tool. Sticker media is treated as image-key media, matching current WhatsApp Web client library behavior.
+The decryption logic is implemented inside the Python add-on process. It supports raw 32-byte media keys and protobuf media-key blobs. Sticker media is treated as image-key media, matching current WhatsApp Web client library behavior.

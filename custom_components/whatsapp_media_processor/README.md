@@ -1,6 +1,8 @@
 # WhatsApp Media Processor Integration
 
-This custom integration replaces `rest_command` wrappers with Home Assistant service actions for the WhatsApp Media Processor add-on.
+Home Assistant custom integration for the WhatsApp Media Processor add-on.
+
+The integration exposes add-on media processing as Home Assistant actions and discovers the running add-on through Supervisor discovery.
 
 ## Installation
 
@@ -10,7 +12,7 @@ This custom integration replaces `rest_command` wrappers with Home Assistant ser
 4. Go to **Settings** > **Devices & services** > **Add integration**.
 5. Add **WhatsApp Media Processor**.
 
-The setup flow finds the installed add-on through Supervisor discovery and checks the add-on `/health` endpoint before saving the config entry. You do not need to enter an IP address or port.
+The setup flow checks the add-on `/health` endpoint before saving the config entry.
 
 ## Actions
 
@@ -25,6 +27,8 @@ All actions accept a `timeout` field. They support optional response data throug
 
 ## Examples
 
+### Audio
+
 ```yaml
 action: whatsapp_media_processor.process_audio
 data:
@@ -32,6 +36,8 @@ data:
   url: "{{ url }}"
 response_variable: whatsapp_audio
 ```
+
+### Document
 
 ```yaml
 action: whatsapp_media_processor.process_document
@@ -42,6 +48,8 @@ data:
 response_variable: whatsapp_document
 ```
 
+### Image
+
 ```yaml
 action: whatsapp_media_processor.process_image
 data:
@@ -50,6 +58,10 @@ data:
   text: "{{ text }}"
 response_variable: whatsapp_image
 ```
+
+For stickers, call `process_image` with `media_type: sticker`.
+
+### Video
 
 ```yaml
 action: whatsapp_media_processor.process_video
@@ -60,4 +72,4 @@ data:
 response_variable: whatsapp_video
 ```
 
-For stickers, call `process_image` with `media_type: sticker`.
+See the repository README for examples using `new_whatsapp_message` events from the WhatsApp integration in `moryoav/ha-addons`.

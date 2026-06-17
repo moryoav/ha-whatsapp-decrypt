@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.0
+
+- Reworked the repository README around the current add-on and companion integration workflow.
+- Added Home Assistant and HACS installation buttons.
+- Added contributor, support, security, conduct, issue template, pull request template, and MIT license files for the GitHub community checklist.
+- Expanded automation examples for `new_whatsapp_message` events from the companion WhatsApp integration.
+
 ## 1.5.0
 
 - Added Home Assistant custom integration brand assets under `custom_components/whatsapp_media_processor/brand`.

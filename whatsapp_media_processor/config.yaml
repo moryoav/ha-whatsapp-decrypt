@@ -1,5 +1,5 @@
 name: WhatsApp Media Processor
-version: "1.5.0"
+version: "1.6.0"
 slug: whatsapp_media_processor
 description: Processes WhatsApp audio, images, documents, and videos for Home Assistant automations
 url: "https://github.com/moryoav/ha-whatsapp-decrypt/tree/main/whatsapp_media_processor"

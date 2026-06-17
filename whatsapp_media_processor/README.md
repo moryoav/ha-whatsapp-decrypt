@@ -1,6 +1,6 @@
 # WhatsApp Media Processor
 
-Decrypts WhatsApp media and prepares it for Home Assistant automations.
+Home Assistant add-on that decrypts WhatsApp media and prepares it for automations through the companion `whatsapp_media_processor` integration.
 
 ## What It Handles
 
@@ -18,14 +18,19 @@ Decrypts WhatsApp media and prepares it for Home Assistant automations.
 - `image_max_output_tokens`: Maximum generated output tokens for image analysis. This maps to the Responses API `max_output_tokens` parameter.
 - `paperless_consume_dir`: Directory where decrypted documents are saved.
 
-See [DOCS.md](./DOCS.md) for endpoint details and automation notes.
-
 ## Companion Integration
 
-This repository also includes a custom Home Assistant integration under `custom_components/whatsapp_media_processor`. It exposes the add-on API as Home Assistant actions so you do not need `rest_command` entries in `configuration.yaml`.
+Install the custom integration from this repository after starting the add-on. It exposes these Home Assistant actions:
 
-The add-on no longer publishes port `9000` to the Home Assistant host. Install the companion integration and call its actions instead of calling the add-on with LAN `rest_command` URLs.
+- `whatsapp_media_processor.process_audio`
+- `whatsapp_media_processor.process_document`
+- `whatsapp_media_processor.process_image`
+- `whatsapp_media_processor.process_video`
 
-## Decryption Engine
+The integration finds this add-on through Home Assistant Supervisor discovery. It does not require an IP address or port during setup.
 
-WhatsApp media decryption is implemented directly in the add-on. The Docker image no longer pulls `ddz/whatsapp-media-decrypt` or `moryoav/whatsapp-media-decrypt` during build.
+See [DOCS.md](./DOCS.md) for internal endpoint details and [the repository README](../README.md) for installation and automation examples.
+
+## Runtime Notes
+
+The add-on exposes an internal HTTP API on port `9000` for the companion integration. The port is not published as a LAN endpoint by default.
