@@ -1,16 +1,16 @@
 configuration:
   openai_api_key:
     name: OpenAI API key
-    description: API key used for audio transcription and image analysis.
+    description: API key used for audio transcription and image OCR/analysis.
   audio_model:
     name: Audio model
     description: OpenAI model used for audio transcription.
   image_model:
     name: Image model
-    description: OpenAI model used for image analysis through the Responses API.
+    description: OpenAI model used for high-fidelity image OCR and analysis through the Responses API.
   image_max_output_tokens:
     name: Image max output tokens
-    description: Maximum generated output tokens for image-analysis responses.
+    description: Maximum generated output tokens for image OCR and analysis responses.
   tesseract_languages:
     name: Tesseract languages
     description: Tesseract OCR language codes to use for image text extraction, separated with plus signs.

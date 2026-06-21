@@ -82,10 +82,10 @@ The integration finds the running add-on through Supervisor discovery and checks
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `openai_api_key` | empty | OpenAI API key used for audio transcription and image analysis. |
+| `openai_api_key` | empty | OpenAI API key used for audio transcription and image OCR/analysis. |
 | `audio_model` | `whisper-1` | OpenAI audio transcription model. |
-| `image_model` | `gpt-5.4-mini` | OpenAI image analysis model. |
-| `image_max_output_tokens` | `12000` | Maximum generated output tokens for image analysis. |
+| `image_model` | `gpt-5.5` | OpenAI image OCR and analysis model. |
+| `image_max_output_tokens` | `20000` | Maximum generated output tokens for image OCR and analysis. |
 | `tesseract_languages` | `eng+heb` | Tesseract OCR languages, separated with plus signs. |
 | `save_dir` | `/share/whatsapp_media_processor` | Default directory where decrypted documents are saved. Use your Paperless consume directory here if that is the desired destination. |
 | `document_model` | empty | Optional OpenAI model for document OCR. Empty falls back to `image_model`. |
@@ -100,10 +100,10 @@ The integration exposes these Home Assistant actions:
 | --- | --- | --- |
 | `whatsapp_media_processor.process_audio` | `code`, `url` | Decrypts WhatsApp audio and returns transcript text. |
 | `whatsapp_media_processor.process_document` | `code`, `url`, `filename` | Decrypts a document, saves it locally, runs Tesseract and OpenAI OCR, and returns the saved path plus both labeled results. |
-| `whatsapp_media_processor.process_image` | `code`, `url`, `text` | Decrypts an image, runs Tesseract OCR, sends it to OpenAI with the prompt/caption, and returns both labeled results. |
+| `whatsapp_media_processor.process_image` | `code`, `url`, `text` | Decrypts an image, runs Tesseract OCR, sends Tesseract plus high-fidelity image tiles to OpenAI, and returns labeled results. |
 | `whatsapp_media_processor.process_video` | `ffmpeg` | Runs a base64-encoded `ffmpeg` command and returns output file metadata. |
 
-All actions accept `timeout` in seconds. `process_image` also accepts `media_type: sticker` for WhatsApp stickers. `process_video` can also accept `user_id`.
+All actions accept `timeout` in seconds. `process_image` also accepts `media_type: sticker` for WhatsApp stickers and `image_mode: auto | strict_ocr | visual_analysis`; `auto` uses strict OCR for text-heavy images and visual analysis for ordinary photos. `process_video` can also accept `user_id`.
 
 Use `response_variable` when the automation needs the result.
 
@@ -188,6 +188,8 @@ For production automations, validate that `document_url` and `document_media_key
     tesseract_text: "{{ whatsapp_msg.tesseract_text | default('', true) | string | trim }}"
     openai_text: "{{ whatsapp_msg.openai_output_text | default('', true) | string | trim }}"
 ```
+
+For recipe screenshots, translated-recipe captions, receipts, documents, and other text-heavy images, `image_mode: auto` resolves to strict OCR. In that mode OpenAI returns source-language transcription only, preserving visible order for the downstream conversation agent to translate or act on.
 
 ### Sticker
 

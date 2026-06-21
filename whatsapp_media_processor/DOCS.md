@@ -16,10 +16,10 @@ Returns add-on health and version metadata for the companion custom integration 
 
 ## Image Analysis
 
-Send `code`, `url`, and `text` query parameters.
+Send `code`, `url`, and `text` query parameters. Optionally include `image_mode=auto`, `image_mode=strict_ocr`, or `image_mode=visual_analysis`; `auto` is the default.
 
 ```text
-GET /?code=<base64_media_key>&url=<encrypted_media_url>&text=<caption_or_request>
+GET /?code=<base64_media_key>&url=<encrypted_media_url>&text=<caption_or_request>&image_mode=auto
 ```
 
 For stickers, include `media_type=sticker` and `text`:
@@ -28,14 +28,19 @@ For stickers, include `media_type=sticker` and `text`:
 GET /?code=<base64_media_key>&url=<encrypted_sticker_url>&media_type=sticker&text=<caption_or_request>
 ```
 
-The image is decrypted, then Tesseract OCR and OpenAI image analysis run in parallel. The OpenAI path resizes and encodes an in-memory copy of the image. The response JSON includes:
+The image is decrypted, then Tesseract OCR runs first. OpenAI receives the Tesseract text as an untrusted hint plus ordered high-fidelity image tiles. Long screenshots are tiled with overlap instead of being downscaled to a tiny single image. Recipe, translation, OCR, receipt, document, and other text-heavy requests use `strict_ocr`, which returns source-language transcription only; downstream automations can translate or act on that text later. The response JSON includes:
 
 - `text`: labeled combined output with separate `Tesseract OCR` and `OpenAI OCR and image analysis` sections.
 - `combined_text`: same value as `text`, for easier Home Assistant templates.
 - `tesseract_text`: raw OCR text returned by Tesseract.
 - `tesseract_error`: error text if Tesseract OCR failed; otherwise `null`.
-- `openai_output_text`: raw aggregated Responses API text output from OpenAI.
+- `openai_output_text`: formatted OpenAI OCR/analysis output for automations.
 - `openai_text`: same value as `openai_output_text`.
+- `openai_raw_output_text`: raw aggregated Responses API text before compatibility formatting.
+- `openai_error`: error text if OpenAI image OCR failed; otherwise `null`.
+- `openai_mode`: resolved mode, either `strict_ocr` or `visual_analysis`.
+- `openai_requested_mode`: requested mode, usually `auto`.
+- `image_processing`: original image dimensions, tile count, detail level metadata, and tile bounds.
 - `ocr`: structured object with separate `tesseract` and `openai` entries.
 - `output_text`: same labeled combined output as `text`.
 - `choices[0].message.content`: compatibility field for older Chat Completions-style templates.
@@ -95,7 +100,7 @@ The command must start with `ffmpeg`. The add-on injects `-y` if it is missing.
 
 ## OpenAI Notes
 
-Image analysis uses `client.responses.create(...)` with `input_text` and `input_image` content items. The configured token limit is sent as `max_output_tokens`, which is the Responses API parameter for generated output length.
+Image OCR and analysis uses `client.responses.create(...)` with `input_text` and `input_image` content items. The configured token limit is sent as `max_output_tokens`, which is the Responses API parameter for generated output length. The add-on requests structured output when the installed OpenAI SDK supports it, and falls back to plain Responses output if the SDK or configured model rejects that parameter.
 
 Tesseract OCR uses `eng+heb` by default, and this can be changed with the `tesseract_languages` add-on option.
 

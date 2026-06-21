@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.9.0
+
+- Changed image processing to prompt-aware OCR with `auto`, `strict_ocr`, and `visual_analysis` modes.
+- Sends Tesseract OCR as an untrusted hint to OpenAI after decrypting image media.
+- Tiles long images for OpenAI instead of downscaling them to a small single image.
+- Updated the default image model to `gpt-5.5` and recommended image output token budget to `20000`.
+
 ## 1.8.0
 
 - Added document OCR after document decryption and local save.

@@ -77,6 +77,14 @@ process_image:
           options:
             - image
             - sticker
+    image_mode:
+      default: "auto"
+      selector:
+        select:
+          options:
+            - auto
+            - strict_ocr
+            - visual_analysis
     timeout:
       default: 90
       selector:

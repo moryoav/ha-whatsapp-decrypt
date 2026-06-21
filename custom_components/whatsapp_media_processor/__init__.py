@@ -15,6 +15,7 @@ from .const import (
     ATTR_CODE,
     ATTR_FILENAME,
     ATTR_FFMPEG,
+    ATTR_IMAGE_MODE,
     ATTR_MEDIA_TYPE,
     ATTR_SAVE_DIR,
     ATTR_TEXT,
@@ -60,6 +61,9 @@ IMAGE_SCHEMA = vol.Schema(
         vol.Required(ATTR_URL): cv.string,
         vol.Required(ATTR_TEXT): cv.string,
         vol.Optional(ATTR_MEDIA_TYPE, default="image"): vol.In(["image", "sticker"]),
+        vol.Optional(ATTR_IMAGE_MODE, default="auto"): vol.In(
+            ["auto", "strict_ocr", "visual_analysis"]
+        ),
         vol.Optional(ATTR_TIMEOUT, default=DEFAULT_IMAGE_TIMEOUT): TIMEOUT_SCHEMA,
     }
 )
@@ -106,6 +110,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             url=call.data[ATTR_URL],
             text=call.data[ATTR_TEXT],
             media_type=call.data[ATTR_MEDIA_TYPE],
+            image_mode=call.data[ATTR_IMAGE_MODE],
             timeout=call.data[ATTR_TIMEOUT],
         )
         return _service_response(call, response)

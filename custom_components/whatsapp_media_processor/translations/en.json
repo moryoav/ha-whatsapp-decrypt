@@ -84,6 +84,10 @@
           "name": "Media type",
           "description": "Use image for photos and sticker for WhatsApp stickers."
         },
+        "image_mode": {
+          "name": "Image mode",
+          "description": "Use auto to choose strict OCR for text-heavy images and visual analysis for photos, or force a mode."
+        },
         "timeout": {
           "name": "Timeout",
           "description": "Maximum time to wait for processing, in seconds."

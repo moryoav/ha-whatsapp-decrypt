@@ -58,10 +58,11 @@ data:
   code: "{{ code }}"
   url: "{{ url }}"
   text: "{{ text }}"
+  image_mode: auto
 response_variable: whatsapp_image
 ```
 
-Image responses include `text` and `combined_text` with labeled Tesseract/OpenAI sections. Use `tesseract_text` or `openai_output_text` when an automation needs one OCR source specifically.
+Image responses include `text` and `combined_text` with labeled Tesseract/OpenAI sections. Use `tesseract_text` or `openai_output_text` when an automation needs one OCR source specifically. `image_mode` can be `auto`, `strict_ocr`, or `visual_analysis`; `auto` chooses strict OCR for text-heavy images such as recipes and visual analysis for ordinary photos.
 
 For stickers, call `process_image` with `media_type: sticker`.
 

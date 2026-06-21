@@ -31,6 +31,7 @@ ATTR_TEXT = "text"
 ATTR_FFMPEG = "ffmpeg"
 ATTR_USER_ID = "user_id"
 ATTR_MEDIA_TYPE = "media_type"
+ATTR_IMAGE_MODE = "image_mode"
 ATTR_TIMEOUT = "timeout"
 
 DATA_SERVICES_REGISTERED = "services_registered"

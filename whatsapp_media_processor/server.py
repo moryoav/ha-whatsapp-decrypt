@@ -35,10 +35,33 @@ DISCOVERY_SERVICE = "whatsapp_media_processor"
 
 DEFAULT_SAVE_DIR = "/share/whatsapp_media_processor"
 DEFAULT_DOCUMENT_OCR_MAX_PAGES = 10
-ADDON_VERSION = "1.8.0"
-DEFAULT_IMAGE_MODEL = "gpt-5.4-mini"
-DEFAULT_IMAGE_MAX_OUTPUT_TOKENS = 12000
+ADDON_VERSION = "1.9.0"
+DEFAULT_IMAGE_MODEL = "gpt-5.5"
+DEFAULT_IMAGE_MAX_OUTPUT_TOKENS = 20000
 DEFAULT_TESSERACT_LANGUAGES = "eng+heb"
+
+IMAGE_MODE_AUTO = "auto"
+IMAGE_MODE_STRICT_OCR = "strict_ocr"
+IMAGE_MODE_VISUAL_ANALYSIS = "visual_analysis"
+IMAGE_MODES = {
+    IMAGE_MODE_AUTO,
+    IMAGE_MODE_STRICT_OCR,
+    IMAGE_MODE_VISUAL_ANALYSIS,
+}
+IMAGE_MODE_ALIASES = {
+    "auto": IMAGE_MODE_AUTO,
+    "ocr": IMAGE_MODE_STRICT_OCR,
+    "strict": IMAGE_MODE_STRICT_OCR,
+    "strict_ocr": IMAGE_MODE_STRICT_OCR,
+    "text": IMAGE_MODE_STRICT_OCR,
+    "visual": IMAGE_MODE_VISUAL_ANALYSIS,
+    "analysis": IMAGE_MODE_VISUAL_ANALYSIS,
+    "visual_analysis": IMAGE_MODE_VISUAL_ANALYSIS,
+}
+OPENAI_IMAGE_TILE_MAX_SIDE = 2048
+OPENAI_IMAGE_TILE_OVERLAP = 160
+STRICT_OCR_MIN_TESSERACT_CHARS = 120
+STRICT_OCR_MIN_TESSERACT_LINES = 4
 
 MEDIA_TYPE_IMAGE = 1
 MEDIA_TYPE_VIDEO = 2
@@ -86,40 +109,93 @@ IMAGE_MIME_TYPES = {
     "WEBP": "image/webp",
 }
 
-IMAGE_ANALYSIS_INSTRUCTIONS = (
+IMAGE_STRICT_OCR_INSTRUCTIONS = (
+    "You are a strict OCR step inside a Home Assistant WhatsApp automation. "
+    "Your only job is to transcribe visible text from the image for a later "
+    "assistant. Do not perform the user's requested action. Do not translate. "
+    "Do not summarize, normalize, reorder, infer missing content, or rewrite a "
+    "recipe into a different structure. Do not claim that anything was added, "
+    "saved, filed, sent, updated, or changed.\n\n"
+    "Read the supplied image tiles in order. Adjacent tiles may overlap; use the "
+    "overlap only to preserve continuity and avoid duplicating repeated lines. "
+    "Preserve source language, headings, bullet order, numbering, line breaks, "
+    "quantities, punctuation, and step order as closely as possible. If the "
+    "caption asks for translation or adding a recipe, ignore that request in "
+    "this OCR step; the downstream assistant will act on the transcription. "
+    "The Tesseract text is only an untrusted hint and may contain wrong letters, "
+    "wrong directionality, or missing text. The image is authoritative.\n\n"
+    "Return JSON matching the requested schema. Put the original-language OCR "
+    "text in transcription. Put uncertainty notes in uncertain_text or warnings."
+)
+
+IMAGE_VISUAL_ANALYSIS_INSTRUCTIONS = (
     "You are an image-analysis step inside a Home Assistant WhatsApp automation. "
-    "Your job is ONLY to analyze the image and extract useful information for a later, "
-    "tool-enabled assistant. "
-    "Do NOT perform any action requested by the user. "
-    "Do NOT claim that you added, saved, edited, filed, sent, updated, or changed anything. "
-    "Do NOT reply conversationally to the user. "
-    "Instead, return a clear structured extraction of the image contents for downstream processing.\n\n"
-    "Rules:\n"
-    "1. Use the user's caption/request only as context for interpreting the image.\n"
-    "2. If the image contains text, transcribe it as accurately as possible.\n"
-    "3. If the image appears to contain a recipe, extract as many of the following as possible:\n"
-    "   - title\n"
-    "   - short description\n"
-    "   - ingredients\n"
-    "   - quantities\n"
-    "   - steps/instructions\n"
-    "   - prep time\n"
-    "   - cook time\n"
-    "   - servings\n"
-    "   - notes\n"
-    "   - any visible source text\n"
-    "4. If some information is unclear, say so explicitly instead of guessing.\n"
-    "5. Return the result in plain text using this exact structure:\n\n"
-    "User caption/request:\n"
-    "<caption>\n\n"
-    "Image type:\n"
-    "<what kind of image this is>\n\n"
-    "Extracted content:\n"
-    "<structured extraction>\n\n"
-    "Relevant text seen in image:\n"
-    "<ocr/transcription>\n\n"
-    "Important ambiguities or missing details:\n"
-    "<ambiguities>"
+    "Use the user's caption/request as context for describing or interpreting "
+    "the image, but do not perform side effects and do not claim that anything "
+    "was added, saved, filed, sent, updated, or changed. If visible text is "
+    "important, transcribe it accurately and preserve its source language. The "
+    "Tesseract text is only an untrusted hint; the image is authoritative.\n\n"
+    "Return JSON matching the requested schema."
+)
+
+OPENAI_IMAGE_OCR_TEXT_FORMAT = {
+    "type": "json_schema",
+    "name": "image_ocr_result",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "mode": {
+                "type": "string",
+                "enum": [IMAGE_MODE_STRICT_OCR, IMAGE_MODE_VISUAL_ANALYSIS],
+            },
+            "source_language": {
+                "type": "string",
+                "description": "Language of the visible text, or empty if unknown.",
+            },
+            "transcription": {
+                "type": "string",
+                "description": "Verbatim visible text in source language.",
+            },
+            "description": {
+                "type": "string",
+                "description": "Image description for visual-analysis mode.",
+            },
+            "uncertain_text": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
+            "warnings": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
+        },
+        "required": [
+            "mode",
+            "source_language",
+            "transcription",
+            "description",
+            "uncertain_text",
+            "warnings",
+        ],
+    },
+}
+
+STRICT_OCR_CAPTION_PATTERN = re.compile(
+    r"\b("
+    r"ocr|read|transcribe|transcription|extract|copy|translate|translation|"
+    r"recipe|ingredients?|instructions?|receipt|invoice|document|screenshot|"
+    r"text|written|menu|label"
+    r")\b",
+    re.IGNORECASE,
+)
+STRICT_OCR_PHRASE_PATTERN = re.compile(
+    r"\b("
+    r"what does (this|it) say|what is written|can you read|read this|"
+    r"copy this text|extract the text"
+    r")\b",
+    re.IGNORECASE,
 )
 
 DOCUMENT_OCR_INSTRUCTIONS = (
@@ -271,6 +347,31 @@ def get_request_media_type(default=None):
         raise ValueError(f"Unsupported media_type '{media_type}'. Use one of: {allowed}")
 
     return parsed
+
+
+def normalize_image_mode(value, default=IMAGE_MODE_AUTO):
+    if value is None:
+        return default
+
+    normalized = str(value).strip().lower().replace("-", "_")
+    if not normalized:
+        return default
+
+    mode = IMAGE_MODE_ALIASES.get(normalized)
+    if mode is None:
+        allowed = ", ".join(sorted(IMAGE_MODE_ALIASES))
+        raise ValueError(f"Unsupported image_mode '{value}'. Use one of: {allowed}")
+
+    return mode
+
+
+def get_request_image_mode(default=IMAGE_MODE_AUTO):
+    return normalize_image_mode(
+        request.args.get("image_mode")
+        or request.args.get("imageMode")
+        or request.args.get("mode"),
+        default,
+    )
 
 
 def decode_media_key_code(code):
@@ -449,7 +550,7 @@ def sanitize_filename(filename):
     return filename
 
 
-def resize_image_for_openai(img):
+def normalize_image_for_openai(img):
     img = ImageOps.exif_transpose(img)
 
     if img.mode in ("RGBA", "LA") or (
@@ -464,34 +565,106 @@ def resize_image_for_openai(img):
     else:
         img = img.copy()
 
-    short_side = min(img.size)
-    long_side = max(img.size)
-
-    if short_side > 768 or long_side > 2000:
-        ratio = min(768 / short_side, 2000 / long_side)
-        new_size = (
-            int(img.size[0] * ratio),
-            int(img.size[1] * ratio),
-        )
-        img = img.resize(new_size, Image.Resampling.LANCZOS)
-
     return img
 
 
-def encode_openai_image_data(image_path):
+def get_openai_image_tile_bounds(
+    size,
+    max_side=OPENAI_IMAGE_TILE_MAX_SIDE,
+    overlap=OPENAI_IMAGE_TILE_OVERLAP,
+):
+    width, height = size
+    if width < 1 or height < 1:
+        raise ValueError("Image dimensions must be greater than zero")
+
+    if max(width, height) <= max_side:
+        return [(0, 0, width, height)]
+
+    if overlap < 0 or overlap >= max_side:
+        raise ValueError("Tile overlap must be at least zero and smaller than max_side")
+
+    bounds = []
+    step = max_side - overlap
+
+    if height >= width:
+        top = 0
+        while True:
+            bottom = min(top + max_side, height)
+            bounds.append((0, top, width, bottom))
+            if bottom >= height:
+                break
+            top += step
+    else:
+        left = 0
+        while True:
+            right = min(left + max_side, width)
+            bounds.append((left, 0, right, height))
+            if right >= width:
+                break
+            left += step
+
+    deduped_bounds = []
+    for bound in bounds:
+        if not deduped_bounds or deduped_bounds[-1] != bound:
+            deduped_bounds.append(bound)
+
+    return deduped_bounds
+
+
+def encode_openai_tile(tile):
+    buffer = io.BytesIO()
+    tile.save(buffer, format="PNG")
+    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+
+def build_openai_tile_label(index, count, direction, bounds):
+    left, top, right, bottom = bounds
+    return (
+        f"Image tile {index}/{count} ({direction}). "
+        f"Pixel bounds: left={left}, top={top}, right={right}, bottom={bottom}."
+    )
+
+
+def prepare_openai_image_inputs(image_path):
     with Image.open(image_path) as img:
-        image_format = img.format if img.format in IMAGE_MIME_TYPES else "JPEG"
-        img = resize_image_for_openai(img)
+        img = normalize_image_for_openai(img)
+        original_width, original_height = img.size
+        bounds = get_openai_image_tile_bounds(img.size)
+        direction = "top-to-bottom" if original_height >= original_width else "left-to-right"
+        count = len(bounds)
+        tiles = []
 
-        if image_format == "JPEG" and img.mode not in ("RGB", "L"):
-            img = img.convert("RGB")
-
-        buffer = io.BytesIO()
-        img.save(buffer, format=image_format)
+        for index, bound in enumerate(bounds, start=1):
+            tile = img.crop(bound)
+            left, top, right, bottom = bound
+            tiles.append({
+                "index": index,
+                "count": count,
+                "label": build_openai_tile_label(index, count, direction, bound),
+                "bounds": {
+                    "left": left,
+                    "top": top,
+                    "right": right,
+                    "bottom": bottom,
+                },
+                "size": {
+                    "width": right - left,
+                    "height": bottom - top,
+                },
+                "mime_type": "image/png",
+                "base64": encode_openai_tile(tile),
+            })
 
     return {
-        "base64": base64.b64encode(buffer.getvalue()).decode("utf-8"),
-        "mime_type": IMAGE_MIME_TYPES.get(image_format, "image/jpeg"),
+        "original_size": {
+            "width": original_width,
+            "height": original_height,
+        },
+        "tile_count": count,
+        "tile_max_side": OPENAI_IMAGE_TILE_MAX_SIDE,
+        "tile_overlap": OPENAI_IMAGE_TILE_OVERLAP if count > 1 else 0,
+        "tile_order": direction,
+        "tiles": tiles,
     }
 
 
@@ -502,6 +675,88 @@ def get_tesseract_languages():
         return DEFAULT_TESSERACT_LANGUAGES
 
     return languages.strip()
+
+
+def tesseract_text_looks_dense(text):
+    if not text:
+        return False
+
+    stripped = text.strip()
+    if len(stripped) >= STRICT_OCR_MIN_TESSERACT_CHARS:
+        return True
+
+    lines = [line for line in stripped.splitlines() if line.strip()]
+    return len(lines) >= STRICT_OCR_MIN_TESSERACT_LINES
+
+
+def caption_requests_strict_ocr(user_text):
+    if not user_text:
+        return False
+
+    return bool(
+        STRICT_OCR_CAPTION_PATTERN.search(user_text)
+        or STRICT_OCR_PHRASE_PATTERN.search(user_text)
+    )
+
+
+def choose_image_mode(requested_mode, user_text, tesseract_text):
+    mode = normalize_image_mode(requested_mode)
+    if mode != IMAGE_MODE_AUTO:
+        return mode
+
+    if caption_requests_strict_ocr(user_text):
+        return IMAGE_MODE_STRICT_OCR
+
+    if tesseract_text_looks_dense(tesseract_text):
+        return IMAGE_MODE_STRICT_OCR
+
+    return IMAGE_MODE_VISUAL_ANALYSIS
+
+
+def model_supports_original_image_detail(model):
+    normalized = (model or "").strip().lower()
+    if not normalized:
+        return False
+
+    if any(fragment in normalized for fragment in ("mini", "nano", "codex")):
+        return False
+
+    return normalized.startswith("gpt-5.5") or normalized.startswith("gpt-5.4")
+
+
+def get_openai_image_detail(model):
+    if model_supports_original_image_detail(model):
+        return "original"
+
+    return "high"
+
+
+def summarize_openai_image_inputs(image_data):
+    return {
+        "original_size": image_data.get("original_size"),
+        "tile_count": image_data.get("tile_count"),
+        "tile_max_side": image_data.get("tile_max_side"),
+        "tile_overlap": image_data.get("tile_overlap"),
+        "tile_order": image_data.get("tile_order"),
+        "tiles": [
+            {
+                "index": tile.get("index"),
+                "count": tile.get("count"),
+                "label": tile.get("label"),
+                "bounds": tile.get("bounds"),
+                "size": tile.get("size"),
+            }
+            for tile in image_data.get("tiles", [])
+        ],
+    }
+
+
+def build_image_processing_metadata(image_data, detail, mode, tesseract_hint_provided):
+    metadata = summarize_openai_image_inputs(image_data)
+    metadata["detail"] = detail
+    metadata["openai_mode"] = mode
+    metadata["tesseract_hint_provided"] = tesseract_hint_provided
+    return metadata
 
 
 def normalize_image_for_ocr(img):
@@ -680,23 +935,31 @@ def format_combined_ocr_text(
     )
 
 
-def format_combined_image_text(tesseract_ocr, openai_output_text):
+def format_combined_image_text(tesseract_ocr, openai_output_text, openai_error=None):
     return format_combined_ocr_text(
         tesseract_ocr,
         openai_output_text,
         "OpenAI OCR and image analysis",
+        openai_error,
     )
 
 
-def build_image_response_payload(response, tesseract_ocr, openai_model):
-    payload = response.model_dump()
-    openai_output_text = getattr(response, "output_text", None) or extract_output_text(
-        payload
+def build_image_response_payload(openai_ocr, tesseract_ocr):
+    payload = dict(openai_ocr.get("payload") or {})
+    openai_output_text = openai_ocr.get("text") or ""
+    combined_text = format_combined_image_text(
+        tesseract_ocr,
+        openai_output_text,
+        openai_ocr.get("error"),
     )
-    combined_text = format_combined_image_text(tesseract_ocr, openai_output_text)
 
     payload["openai_output_text"] = openai_output_text
     payload["openai_text"] = openai_output_text
+    payload["openai_raw_output_text"] = openai_ocr.get("raw_text") or ""
+    payload["openai_error"] = openai_ocr.get("error")
+    payload["openai_mode"] = openai_ocr.get("mode")
+    payload["openai_requested_mode"] = openai_ocr.get("requested_mode")
+    payload["image_processing"] = openai_ocr.get("image_processing")
     payload["tesseract_text"] = tesseract_ocr.get("text") or ""
     payload["tesseract_error"] = tesseract_ocr.get("error")
     payload["combined_text"] = combined_text
@@ -706,9 +969,15 @@ def build_image_response_payload(response, tesseract_ocr, openai_model):
         "tesseract": tesseract_ocr,
         "openai": {
             "engine": "openai",
-            "model": openai_model,
+            "model": openai_ocr.get("model"),
             "text": openai_output_text,
-            "error": None,
+            "raw_text": openai_ocr.get("raw_text") or "",
+            "mode": openai_ocr.get("mode"),
+            "requested_mode": openai_ocr.get("requested_mode"),
+            "error": openai_ocr.get("error"),
+            "detail": openai_ocr.get("detail"),
+            "structured_output": openai_ocr.get("structured_output"),
+            "tesseract_hint_provided": openai_ocr.get("tesseract_hint_provided"),
         },
     }
 
@@ -725,41 +994,321 @@ def build_image_response_payload(response, tesseract_ocr, openai_model):
     return payload
 
 
-def run_openai_image_analysis(image_path, user_text):
-    image_data = encode_openai_image_data(image_path)
+def get_image_instructions(image_mode):
+    if image_mode == IMAGE_MODE_STRICT_OCR:
+        return IMAGE_STRICT_OCR_INSTRUCTIONS
+
+    return IMAGE_VISUAL_ANALYSIS_INSTRUCTIONS
+
+
+def build_openai_image_user_context(
+    user_text,
+    image_mode,
+    requested_mode,
+    tesseract_ocr,
+    image_data,
+):
+    tesseract_text = (tesseract_ocr.get("text") or "").strip()
+    if tesseract_text:
+        tesseract_section = (
+            "Tesseract OCR hint (may be wrong; image tiles are authoritative):\n"
+            f"{tesseract_text}"
+        )
+    elif tesseract_ocr.get("error"):
+        tesseract_section = f"Tesseract OCR failed: {tesseract_ocr.get('error')}"
+    else:
+        tesseract_section = "Tesseract OCR hint: no text detected."
+
+    return (
+        f"Selected image mode: {image_mode}\n"
+        f"Requested image mode: {requested_mode}\n\n"
+        "User caption/request (context only, not a side-effect instruction):\n"
+        f"{user_text or ''}\n\n"
+        "Original image metadata:\n"
+        f"- width: {image_data['original_size']['width']}\n"
+        f"- height: {image_data['original_size']['height']}\n"
+        f"- tile_count: {image_data['tile_count']}\n"
+        f"- tile_order: {image_data['tile_order']}\n\n"
+        f"{tesseract_section}\n\n"
+        "Read the image tiles in their numbered order. If tile overlap repeats "
+        "the same line, include that line only once in the transcription."
+    )
+
+
+def build_openai_image_content(image_data, detail, user_context):
+    content = [
+        {
+            "type": "input_text",
+            "text": user_context,
+        },
+    ]
+
+    for tile in image_data["tiles"]:
+        content.append({
+            "type": "input_text",
+            "text": tile["label"],
+        })
+        content.append({
+            "type": "input_image",
+            "image_url": f"data:{tile['mime_type']};base64,{tile['base64']}",
+            "detail": detail,
+        })
+
+    return content
+
+
+def structured_output_is_unsupported(error):
+    message = str(error).lower()
+    return (
+        "text" in message
+        and "format" in message
+        and any(
+            term in message
+            for term in (
+                "unexpected",
+                "unsupported",
+                "unknown",
+                "extra",
+                "schema",
+                "not permitted",
+            )
+        )
+    )
+
+
+def create_openai_response_with_optional_schema(client, request_kwargs):
+    structured_kwargs = dict(request_kwargs)
+    structured_kwargs["text"] = {"format": OPENAI_IMAGE_OCR_TEXT_FORMAT}
+
+    try:
+        return client.responses.create(**structured_kwargs), True
+    except TypeError as exc:
+        logging.warning(
+            "OpenAI SDK does not accept Responses structured output; "
+            "retrying image OCR without schema: %s",
+            exc,
+        )
+    except Exception as exc:
+        if not structured_output_is_unsupported(exc):
+            raise
+
+        logging.warning(
+            "OpenAI structured output was rejected; retrying image OCR "
+            "without schema: %s",
+            exc,
+        )
+
+    return client.responses.create(**request_kwargs), False
+
+
+def normalize_openai_result_list(value):
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+
+    return []
+
+
+def parse_openai_image_json(raw_text, fallback_mode):
+    stripped = (raw_text or "").strip()
+    if stripped.startswith("```"):
+        stripped = re.sub(r"^```(?:json)?\s*", "", stripped, flags=re.IGNORECASE)
+        stripped = re.sub(r"\s*```$", "", stripped)
+
+    try:
+        parsed = json.loads(stripped)
+    except (TypeError, ValueError):
+        if fallback_mode == IMAGE_MODE_STRICT_OCR:
+            transcription = raw_text or ""
+            description = ""
+        else:
+            transcription = ""
+            description = raw_text or ""
+
+        return {
+            "mode": fallback_mode,
+            "source_language": "",
+            "transcription": transcription,
+            "description": description,
+            "uncertain_text": [],
+            "warnings": ["OpenAI response was not valid structured JSON."],
+        }
+
+    if not isinstance(parsed, dict):
+        return {
+            "mode": fallback_mode,
+            "source_language": "",
+            "transcription": raw_text or "",
+            "description": "",
+            "uncertain_text": [],
+            "warnings": ["OpenAI response JSON was not an object."],
+        }
+
+    mode = parsed.get("mode") if parsed.get("mode") in IMAGE_MODES else fallback_mode
+    if mode == IMAGE_MODE_AUTO:
+        mode = fallback_mode
+
+    return {
+        "mode": mode,
+        "source_language": str(parsed.get("source_language") or "").strip(),
+        "transcription": str(parsed.get("transcription") or "").strip(),
+        "description": str(parsed.get("description") or "").strip(),
+        "uncertain_text": normalize_openai_result_list(parsed.get("uncertain_text")),
+        "warnings": normalize_openai_result_list(parsed.get("warnings")),
+    }
+
+
+def format_openai_image_result(result, fallback_mode):
+    mode = result.get("mode") or fallback_mode
+    lines = [
+        "Mode:",
+        mode,
+        "",
+        "Source language:",
+        result.get("source_language") or "unknown",
+        "",
+    ]
+
+    if mode == IMAGE_MODE_STRICT_OCR:
+        lines.extend([
+            "Transcription:",
+            result.get("transcription") or "[No text returned]",
+        ])
+    else:
+        lines.extend([
+            "Description:",
+            result.get("description") or "[No description returned]",
+        ])
+        if result.get("transcription"):
+            lines.extend([
+                "",
+                "Visible text transcription:",
+                result["transcription"],
+            ])
+
+    if result.get("uncertain_text"):
+        lines.extend(["", "Uncertain text:"])
+        lines.extend(f"- {item}" for item in result["uncertain_text"])
+
+    if result.get("warnings"):
+        lines.extend(["", "Warnings:"])
+        lines.extend(f"- {item}" for item in result["warnings"])
+
+    return "\n".join(lines).strip()
+
+
+def build_openai_image_error(
+    error,
+    image_model,
+    image_mode,
+    requested_mode,
+    detail,
+    image_data,
+    tesseract_hint_provided,
+):
+    return {
+        "engine": "openai",
+        "model": image_model,
+        "text": "",
+        "raw_text": "",
+        "error": str(error),
+        "mode": image_mode,
+        "requested_mode": requested_mode,
+        "detail": detail,
+        "structured_output": False,
+        "tesseract_hint_provided": tesseract_hint_provided,
+        "payload": {},
+        "image_processing": build_image_processing_metadata(
+            image_data,
+            detail,
+            image_mode,
+            tesseract_hint_provided,
+        ),
+    }
+
+
+def run_openai_image_analysis(image_path, user_text, tesseract_ocr, requested_mode):
+    image_data = prepare_openai_image_inputs(image_path)
     client = get_openai_client()
     image_model = get_option("image_model", DEFAULT_IMAGE_MODEL)
+    image_detail = get_openai_image_detail(image_model)
     image_max_output_tokens = get_int_option(
         "image_max_output_tokens",
         DEFAULT_IMAGE_MAX_OUTPUT_TOKENS,
     )
-
-    response = client.responses.create(
-        model=image_model,
-        instructions=IMAGE_ANALYSIS_INSTRUCTIONS,
-        input=[
+    image_mode = choose_image_mode(
+        requested_mode,
+        user_text,
+        tesseract_ocr.get("text") or "",
+    )
+    user_context = build_openai_image_user_context(
+        user_text,
+        image_mode,
+        requested_mode,
+        tesseract_ocr,
+        image_data,
+    )
+    request_kwargs = {
+        "model": image_model,
+        "instructions": get_image_instructions(image_mode),
+        "input": [
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "input_text",
-                        "text": f"User caption/request:\n{user_text}",
-                    },
-                    {
-                        "type": "input_image",
-                        "image_url": (
-                            f"data:{image_data['mime_type']};"
-                            f"base64,{image_data['base64']}"
-                        ),
-                    },
-                ],
+                "content": build_openai_image_content(
+                    image_data,
+                    image_detail,
+                    user_context,
+                ),
             },
         ],
-        max_output_tokens=image_max_output_tokens,
-        store=False,
-    )
+        "max_output_tokens": image_max_output_tokens,
+        "store": False,
+    }
+    tesseract_hint_provided = bool((tesseract_ocr.get("text") or "").strip())
 
-    return response, image_model
+    try:
+        response, structured_output = create_openai_response_with_optional_schema(
+            client,
+            request_kwargs,
+        )
+    except Exception as exc:
+        logging.warning("OpenAI image OCR failed: %s", exc, exc_info=True)
+        return build_openai_image_error(
+            exc,
+            image_model,
+            image_mode,
+            requested_mode,
+            image_detail,
+            image_data,
+            tesseract_hint_provided,
+        )
+
+    payload = response.model_dump()
+    raw_text = getattr(response, "output_text", None) or extract_output_text(payload)
+    parsed = parse_openai_image_json(raw_text, image_mode)
+    openai_text = format_openai_image_result(parsed, image_mode)
+
+    return {
+        "engine": "openai",
+        "model": image_model,
+        "text": openai_text,
+        "raw_text": raw_text,
+        "error": None,
+        "mode": parsed.get("mode") or image_mode,
+        "requested_mode": requested_mode,
+        "detail": image_detail,
+        "structured_output": structured_output,
+        "tesseract_hint_provided": tesseract_hint_provided,
+        "payload": payload,
+        "image_processing": build_image_processing_metadata(
+            image_data,
+            image_detail,
+            parsed.get("mode") or image_mode,
+            tesseract_hint_provided,
+        ),
+    }
 
 
 def run_openai_document_ocr(page_images, filename):
@@ -1040,6 +1589,7 @@ def process_image():
     url = request.args.get("url")
     user_text = request.args.get("text")
     media_type = get_request_media_type(MEDIA_TYPE_IMAGE)
+    requested_image_mode = get_request_image_mode()
 
     if media_type not in (MEDIA_TYPE_IMAGE, MEDIA_TYPE_STICKER):
         raise ValueError("Image processing only supports image or sticker media")
@@ -1057,19 +1607,16 @@ def process_image():
         output_path=decrypted_file_path,
     )
 
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        tesseract_future = executor.submit(run_tesseract_ocr, decrypted_file_path)
-        openai_future = executor.submit(
-            run_openai_image_analysis,
-            decrypted_file_path,
-            user_text,
-        )
-
-        response, image_model = openai_future.result()
-        tesseract_ocr = tesseract_future.result()
+    tesseract_ocr = run_tesseract_ocr(decrypted_file_path)
+    openai_ocr = run_openai_image_analysis(
+        decrypted_file_path,
+        user_text,
+        tesseract_ocr,
+        requested_image_mode,
+    )
 
     return jsonify(
-        build_image_response_payload(response, tesseract_ocr, image_model)
+        build_image_response_payload(openai_ocr, tesseract_ocr)
     ), 200
 
 

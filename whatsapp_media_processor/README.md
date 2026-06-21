@@ -5,17 +5,17 @@ Home Assistant add-on that decrypts WhatsApp media and prepares it for automatio
 ## What It Handles
 
 - Audio: decrypts WhatsApp audio and transcribes it with OpenAI audio transcription.
-- Images: decrypts, extracts OCR with Tesseract, and analyzes images with the OpenAI Responses API.
+- Images: decrypts, extracts OCR with Tesseract, and sends high-fidelity image tiles plus the Tesseract hint to the OpenAI Responses API.
 - Stickers: supported as image-key media when explicitly requested with `media_type=sticker`.
 - Documents: decrypts, saves files locally, and returns Tesseract plus OpenAI OCR.
 - Videos: runs a base64-encoded `ffmpeg` command for automation-driven processing.
 
 ## Configuration
 
-- `openai_api_key`: OpenAI API key used for audio transcription and image analysis.
+- `openai_api_key`: OpenAI API key used for audio transcription and image OCR/analysis.
 - `audio_model`: OpenAI transcription model. Defaults to `whisper-1`.
-- `image_model`: OpenAI image-analysis model. Defaults to `gpt-5.4-mini`.
-- `image_max_output_tokens`: Maximum generated output tokens for image analysis. This maps to the Responses API `max_output_tokens` parameter.
+- `image_model`: OpenAI image OCR and analysis model. Defaults to `gpt-5.5`.
+- `image_max_output_tokens`: Maximum generated output tokens for image OCR and analysis. Defaults to `20000` and maps to the Responses API `max_output_tokens` parameter.
 - `tesseract_languages`: Tesseract OCR languages. Defaults to `eng+heb`.
 - `save_dir`: Default directory where decrypted documents are saved. Use a Paperless consume directory here if documents should be sent to Paperless.
 - `document_model`: Optional OpenAI model for document OCR. Leave empty to use `image_model`.

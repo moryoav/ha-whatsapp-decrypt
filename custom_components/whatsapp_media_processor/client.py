@@ -14,6 +14,7 @@ from .const import (
     ATTR_CODE,
     ATTR_FILENAME,
     ATTR_FFMPEG,
+    ATTR_IMAGE_MODE,
     ATTR_MEDIA_TYPE,
     ATTR_SAVE_DIR,
     ATTR_TEXT,
@@ -100,6 +101,7 @@ class WhatsAppMediaProcessorClient:
         url: str,
         text: str,
         media_type: str,
+        image_mode: str,
         timeout: int,
     ) -> dict[str, Any]:
         """Process a WhatsApp image or sticker message."""
@@ -110,6 +112,7 @@ class WhatsAppMediaProcessorClient:
                 ATTR_URL: url,
                 ATTR_TEXT: text,
                 ATTR_MEDIA_TYPE: media_type,
+                ATTR_IMAGE_MODE: image_mode,
             },
             timeout=timeout,
         )
